@@ -60,7 +60,8 @@
     (when (fn? sym-or-fn)
       sym-or-fn)
     (get built-ins/query-fns sym-or-fn)
-    #?(:clj (when (namespace sym-or-fn)
+    #?(:cljd nil
+       :clj (when (namespace sym-or-fn)
               (when-some [v (requiring-resolve sym-or-fn)]
                 @v)))
     (raise "Can't resolve symbol " sym-or-fn {:error :parser/pull, :fragment sym-or-fn})))
@@ -181,11 +182,11 @@
                       result
                       attr-spec)]
         (recur (next pattern) result'))
-        
+
       :let [pull-attr (parse-attr-spec db attr-spec)]
 
       (nil? pull-attr)
       (check false "attr-name | attr-expr | map-spec | *" attr-spec)
-      
+
       :else
       (recur (next pattern) (conj-attr result pull-attr)))))

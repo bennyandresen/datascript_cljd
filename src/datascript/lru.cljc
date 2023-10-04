@@ -13,6 +13,17 @@
       IPrintWithWriter
       (-pr-writer [_ writer opts]
                   (-pr-writer key-value writer opts)))
+   :cljd
+    (deftype LRU [key-value gen-key key-gen gen limit]
+      cljd.core/IAssociative
+      (-assoc [this k v] (assoc-lru this k v))
+      cljd.core/ILookup
+      (-lookup [_ k]    (-lookup key-value k nil))
+      (-lookup [_ k nf] (-lookup key-value k nf))
+      (-contains-key? [_ k] (-contains-key? key-value k))
+      cljd.core/IPrint
+      (-print [_ sink]
+        (-print key-value sink)))
    :clj
     (deftype LRU [^clojure.lang.Associative key-value gen-key key-gen gen limit]
       clojure.lang.ILookup

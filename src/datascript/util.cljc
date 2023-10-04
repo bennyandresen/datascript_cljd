@@ -1,5 +1,6 @@
 (ns datascript.util
-  #?(:clj
+  #?(:cljd nil
+     :clj
      (:import
        [java.util UUID])))
 
@@ -13,7 +14,12 @@
 (defn- rand-bits [pow]
   (rand-int (bit-shift-left 1 pow)))
 
-#?(:cljs
+#?(:cljd
+   (defn- to-hex-string [^int n l]
+     (-> n (.toRadixString 16)
+       (subs l)
+       (.padLeft l "0")))
+   :cljs
    (defn- to-hex-string [n l]
      (let [s (.toString n 16)
            c (count s)]
@@ -24,10 +30,22 @@
 
 (defn squuid
   ([]
-   (squuid #?(:clj  (System/currentTimeMillis)
+   (squuid #?(:cljd (.-millisecondsSinceEpoch (DateTime/now))
+              :clj  (System/currentTimeMillis)
               :cljs (.getTime (js/Date.)))))
   ([msec]
-   #?(:clj
+   #?(:cljd
+      (uuid
+        (str
+          (-> (int (/ msec 1000))
+            (to-hex-string 8))
+          "-" (-> (rand-bits 16) (to-hex-string 4))
+          "-" (-> (rand-bits 16) (bit-and 0x0FFF) (bit-or 0x4000) (to-hex-string 4))
+          "-" (-> (rand-bits 16) (bit-and 0x3FFF) (bit-or 0x8000) (to-hex-string 4))
+          "-" (-> (rand-bits 16) (to-hex-string 4))
+          (-> (rand-bits 16) (to-hex-string 4))
+          (-> (rand-bits 16) (to-hex-string 4))))
+      :clj
       (let [uuid     (UUID/randomUUID)
             time     (int (/ msec 1000))
             high     (.getMostSignificantBits uuid)
@@ -50,7 +68,10 @@
 (defn squuid-time-millis
   "Returns time that was used in [[squuid]] call, in milliseconds, rounded to the closest second."
   [uuid]
-  #?(:clj (-> (.getMostSignificantBits ^UUID uuid)
+  #?(:cljd (-> (subs (str uuid) 0 8)
+             (int/parse .radix 16)
+             (* 1000))
+     :clj (-> (.getMostSignificantBits ^UUID uuid)
             (bit-shift-right 32)
             (* 1000))
      :cljs (-> (subs (str uuid) 0 8)
