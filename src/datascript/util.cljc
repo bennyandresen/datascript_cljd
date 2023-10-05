@@ -17,8 +17,8 @@
 #?(:cljd
    (defn- to-hex-string [^int n l]
      (-> n (.toRadixString 16)
-       (subs l)
-       (.padLeft l "0")))
+       (.padLeft l "0")
+       (subs 0 l)))
    :cljs
    (defn- to-hex-string [n l]
      (let [s (.toString n 16)

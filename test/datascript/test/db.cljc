@@ -1,11 +1,13 @@
 (ns datascript.test.db
   (:require
     [clojure.data]
-    #?(:cljs [cljs.test    :as t :refer-macros [is are deftest testing]]
+    #?(:cljd [clojure.test :as t :refer        [is are deftest testing]]
+       :cljs [cljs.test    :as t :refer-macros [is are deftest testing]]
        :clj  [clojure.test :as t :refer        [is are deftest testing]])
     [datascript.core :as d]
-    [datascript.db :as db #?@(:cljs [:refer-macros [defrecord-updatable]]
-                                      :clj  [:refer [defrecord-updatable]])]))
+    [datascript.db :as db #?@(:cljd [:refer [defrecord-updatable]]
+                              :cljs [:refer-macros [defrecord-updatable]]
+                              :clj  [:refer [defrecord-updatable]])]))
 
 ;;
 ;; verify that defrecord-updatable works with compiler/core macro configuration
@@ -14,6 +16,7 @@
 ;;
 (defrecord-updatable HashBeef [x]
   #?@(:cljs [IHash                (-hash  [hb] 0xBEEF)]
+      :cljd [cljd.core/IHash      (-hash  [hb] 0xBEEF)]
       :clj  [clojure.lang.IHashEq (hasheq [hb] 0xBEEF)]))
 
 (deftest test-defrecord-updatable
@@ -29,7 +32,8 @@
       (is (= h @(.-hash db))))))
 
 (defn- now []
-  #?(:clj  (System/currentTimeMillis)
+  #?(:cljd (.-millisecondsSinceEpoch (DateTime/now))
+     :clj  (System/currentTimeMillis)
      :cljs (.getTime (js/Date.))))
 
 (deftest test-uuid

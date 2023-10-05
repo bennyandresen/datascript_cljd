@@ -2,7 +2,7 @@
   (:require
     #?(:cljs [goog.array :as garray])
     [clojure.walk]
-    #_[clojure.data]
+    [clojure.data]
     #?(:cljd nil :clj [datascript.inline :refer [update]])
     [datascript.lru :as lru]
     #?@(:cljd ()
@@ -870,10 +870,10 @@
       (resolve-datom db nil attr start nil e0 tx0)
       (resolve-datom db nil attr end nil emax txmax)))
 
-  #_#_clojure.data/EqualityPartition
+  clojure.data/EqualityPartition
   (equality-partition [x] :datascript/db)
 
-  #_#_clojure.data/Diff
+  clojure.data/Diff
   (diff-similar [a b]
     (diff-sorted (:eavt a) (:eavt b) cmp-datoms-eav-quick)))
 
