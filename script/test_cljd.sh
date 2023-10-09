@@ -10,7 +10,7 @@ cat > tmp/cljdtests/deps.edn <<EOF
  :deps {org.clojure/clojure {:mvn/version "1.11.1"}
         tensegritics/clojuredart
         {:git/url "https://github.com/tensegritics/ClojureDart.git"
-         :sha "64a773790eaa85f7ac56546ccd15eb9a73c4ffe8"}
+         :sha "095e266b14457bb024e7cfce4cb1eb19a10b12df"}
         datascript/datascript {:local/root "../../"}}
  :cljd/opts {:main acme.unused
              :kind :dart}}
@@ -19,6 +19,5 @@ EOF
 cd tmp/cljdtests
 clojure -M -m cljd.build init
 dart pub add -d test || true
-clojure -M -m cljd.build compile datascript.test.db
+clojure -M -m cljd.build compile datascript.test.db datascript.test.conn
 dart test -p vm
-

@@ -39,13 +39,15 @@
            (reset! test-summary (dissoc m :type))))
 
 (defn wrap-res [f]
-  #?(:cljs (do (f) (clj->js @test-summary))
+  #?(:cljd :TOOD?
+     :cljs (do (f) (clj->js @test-summary))
      :clj  (let [res (f)]
              (when (pos? (+ (:fail res) (:error res)))
                (System/exit 1)))))
 
 ;; utils
-#?(:clj
+#?(:cljd nil
+   :clj
 (defmethod t/assert-expr 'thrown-msg? [msg form]
   (let [[_ match & body] form]
     `(try ~@body
@@ -67,7 +69,8 @@
 (defn all-datoms [db]
   (into #{} (map (juxt :e :a :v)) (d/datoms db :eavt)))
 
-#?(:clj
+#?(:cljd nil
+   :clj
 (defn no-namespace-maps [t]
   (binding [*print-namespace-maps* false]
     (t)))
