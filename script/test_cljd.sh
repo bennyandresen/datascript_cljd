@@ -19,5 +19,5 @@ EOF
 cd tmp/cljdtests
 clojure -M -m cljd.build init
 dart pub add -d test || true
-clojure -M -m cljd.build compile datascript.test.db datascript.test.conn
+clojure -A:cljd-dev -M -m cljd.build compile datascript.test.db datascript.test.conn datascript.test.index datascript.test.query datascript.test.transact
 dart test -p vm

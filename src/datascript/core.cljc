@@ -24,7 +24,7 @@
 
 ; Entities
 
-(def ^{:tag Entity
+(def ^{:tag Entity?
        :arglists '([db eid])
        :doc "Retrieves an entity by its id from database. Entities are lazy map-like structures to navigate DataScript database content.
 
@@ -74,7 +74,8 @@
              - Comparing entities just compares their ids. Be careful when comparing entities taken from different dbs or from different versions of the same db.
              - Accessed entity attributes are cached on entity itself (except backward references).
              - When printing, only cached attributes (the ones you have accessed before) are printed. See [[touch]]."}
-  entity de/entity)
+  entity
+  #(de/entity %1 %2)) ; CLJD bug
 
 (def ^{:arglists '([db eid])
        :doc "Given lookup ref `[unique-attr value]`, returns numberic entity id.

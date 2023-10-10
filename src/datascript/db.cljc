@@ -501,7 +501,14 @@
      :cljs (hash x)))
 
 #?(:cljd
-   (defn value-compare ^int [x y] (compare x y))
+   (defn value-compare ^int [x y]
+     #_(compare x y)
+     (try
+       (if (= x y)
+         0
+         (compare x y))
+       (catch Object e
+         (- (hash x) (hash y)))))
    :default
    (defn value-compare
      ^long [x y]
@@ -740,7 +747,7 @@
    (do
      (defn set-slice [s from to] (subseq s >= from <= to))
      (defn set-rslice [s from to] (rsubseq s >= to <= from))
-     (def ->Eduction cljd.core/Eduction.new)))
+     (defn ->Eduction [xform coll] (cljd.core/Eduction xform coll -1))))
 
 (defrecord-updatable DB [schema eavt aevt avet max-eid max-tx rschema pull-patterns pull-attrs hash]
   #?@(:cljd
@@ -748,7 +755,8 @@
        cljd.core/IEquiv               (-equiv [db other]  (equiv-db db other))
        cljd.core/IReversible          (-rseq  [db]        (-rseq (.-eavt db)))
        cljd.core/ICounted             (-count [db]        (count (.-eavt db)))
-       cljd.core/IEmptyableCollection (-empty [db]        (-> (restore-db
+       cljd.core/IEmptyableCollection (-empty [db]
+                                        (-> (restore-db
                                                       {:schema  (.-schema db)
                                                        :rschema (.-rschema db)
                                                        :eavt    (empty (.-eavt db))

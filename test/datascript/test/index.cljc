@@ -1,10 +1,21 @@
 (ns datascript.test.index
   (:require
-    #?(:cljs [cljs.test    :as t :refer-macros [is are deftest testing]]
-       :clj  [clojure.test :as t :refer        [is are deftest testing]])
+   #?(:cljd [cljd.test    :as t :refer        [is are deftest testing]]
+      :cljs [cljs.test    :as t :refer-macros [is are deftest testing]]
+      :clj  [clojure.test :as t :refer        [is are deftest testing]])
     [datascript.core :as d]
     [datascript.db :as db]
     [datascript.test.core :as tdc]))
+
+#?(:cljd
+   (defmacro thrown-msg? [expected-msg & body]
+     `(try
+        ~@body
+        false
+        (catch Object e
+          (or (.contains (.toString e) ~expected-msg)
+            ; rethrow for now to have a telling exception
+            (throw e))))))
 
 (deftest test-datoms
   (let [dvec #(vector (:e %) (:a %) (:v %))
@@ -79,11 +90,11 @@
     (is (= [1 :age 44] (dvec (d/find-datom db :eavt 1 :age))))
     (is (= [1 :name "Petr"] (dvec (d/find-datom db :eavt 1 :name))))
     (is (= [1 :name "Petr"] (dvec (d/find-datom db :eavt 1 :name "Petr"))))
-    
+
     (is (= [2 :age 25] (dvec (d/find-datom db :eavt 2))))
     (is (= [2 :age 25] (dvec (d/find-datom db :eavt 2 :age))))
     (is (= [2 :name "Ivan"] (dvec (d/find-datom db :eavt 2 :name))))
-    
+
     (is (= nil (dvec (d/find-datom db :eavt 1 :name "Ivan"))))
     (is (= nil (dvec (d/find-datom db :eavt 4))))))
 

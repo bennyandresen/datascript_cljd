@@ -111,13 +111,17 @@
    :clj (set! *unchecked-math* true))
 
 #?(:cljd
-   (defn join-tuples [t1 idxs1
-                      t2 idxs2]
+   (defn join-tuples [t1 ^List idxs1
+                      t2 ^List idxs2]
      (let [l1  (alength idxs1)
            l2  (alength idxs2)
            res (make-array (+ l1 l2))]
-       (dotimes [i l1] (aset res i (aget t1 (aget idxs1 i))))
-       (dotimes [i l2] (aset res (+ l1 i) (aget t2 (aget idxs2 i))))
+       (if (instance? List t1)
+         (dotimes [i l1] (aset res i (aget ^List t1 (aget idxs1 i))))
+         (dotimes [i l1] (aset res i (get t1 (aget idxs1 i)))))
+       (if (instance? List t2)
+         (dotimes [i l2] (aset res (+ l1 i) (get ^List t2 (aget idxs2 i))))
+         (dotimes [i l2] (aset res (+ l1 i) (get t2 (aget idxs2 i)))))
        res))
    :clj
    (defn join-tuples [t1 ^{:tag "[[Ljava.lang.Object;"} idxs1
@@ -212,7 +216,7 @@
 
 (extend-protocol IBinding
   BindIgnore
-  (in->rel [_ _]
+  (in->rel [_ _cljd_bug]
     (prod-rel))
 
   BindScalar
@@ -288,7 +292,9 @@
         (let [idx (int idx)]
           (fn contained-int-getter-fn [tuple]
             (let [eid #?(:cljs (da/aget tuple idx)
-                         :cljd (aget tuple idx)
+                         :cljd (if (instance? List tuple)
+                                 (aget ^objects tuple idx)
+                                 (nth tuple idx))
                          :clj (if (.isArray (.getClass ^Object tuple))
                                 (aget ^objects tuple idx)
                                 (nth tuple idx)))]
@@ -301,7 +307,7 @@
         ;; If the index is not an int?, the target can never be an array
         (fn contained-getter-fn [tuple]
           (let [eid #?(:cljs (da/aget tuple idx)
-                       :cljd (aget tuple idx)
+                       :cljd (get tuple idx)
                        :clj (.valAt ^ILookup tuple idx))]
             (cond
               (number? eid)     eid ;; quick path to avoid fn call
@@ -313,13 +319,15 @@
         (let [idx (int idx)]
           (fn int-getter [tuple]
             #?(:cljs (da/aget tuple idx)
-               :cljd (aget tuple idx)
+               :cljd (if (instance? List tuple)
+                       (aget ^objects tuple idx)
+                       (nth tuple idx))
                :clj (if (.isArray (.getClass ^Object tuple))
                       (aget ^objects tuple idx)
                       (nth tuple idx)))))
         ;; If the index is not an int?, the target can never be an array
         (fn getter [tuple]
-          #?(:cljd (aget tuple idx)
+          #?(:cljd (get tuple idx)
              :cljs (da/aget tuple idx)
              :clj (.valAt ^ILookup tuple idx)))))))
 
@@ -815,7 +823,7 @@
            context'         (assoc context :rels [(reduce hash-join (:rels context))])
            join-context     (limit-context context' vars)
            negation-context (-> (reduce resolve-clause join-context clauses)
-                                (limit-context vars))
+                              (limit-context vars))
            negation         (subtract-rel
                               (single (:rels context'))
                               (reduce hash-join (:rels negation-context)))]
@@ -855,9 +863,13 @@
          (fn [t2]
            (let [res (aclone t1)]
              #?(:cljd
-                (dotimes [i len]
-                  (when-some [idx (aget ^objects copy-map i)]
-                    (aset res i (aget ^objects t2 idx))))
+                (if (instance? List t2)
+                  (dotimes [i len]
+                    (when-some [idx (aget ^objects copy-map i)]
+                      (aset res i (aget ^objects t2 idx))))
+                  (dotimes [i len]
+                    (when-some [idx (aget ^objects copy-map i)]
+                      (aset res i (get t2 idx)))))
                 :clj
                 (if (.isArray (.getClass ^Object t2))
                   (dotimes [i len]

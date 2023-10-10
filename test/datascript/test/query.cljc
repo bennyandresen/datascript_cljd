@@ -1,13 +1,25 @@
 (ns datascript.test.query
   (:require
-    #?(:cljs [cljs.test    :as t :refer-macros [is are deftest testing]]
-       :clj  [clojure.test :as t :refer        [is are deftest testing]])
+   #?(:cljd  [cljd.test :as t :refer        [is are deftest testing]]
+      :cljs [cljs.test    :as t :refer-macros [is are deftest testing]]
+      :clj  [clojure.test :as t :refer        [is are deftest testing]])
     [datascript.core :as d]
     [datascript.db :as db]
-    [datascript.test.core :as tdc])
-    #?(:clj
-      (:import [clojure.lang ExceptionInfo])))
+    [datascript.test.core :as tdc]
+    [cljd.core :refer [ExceptionInfo]])
+  #?(:cljd nil
+     :clj
+       (:import [clojure.lang ExceptionInfo])))
 
+#?(:cljd
+   (defmacro thrown-msg? [expected-msg & body]
+     `(try
+        ~@body
+        false
+        (catch Object e
+          (or (.contains (.toString e) ~expected-msg)
+            ; rethrow for now to have a telling exception
+            (throw e))))))
 
 (deftest test-joins
   (let [db (-> (d/empty-db)
@@ -108,7 +120,7 @@
              #{[1 "ivan@mail.ru"]
                [2 "petr@gmail.com"]
                [3 "ivan@mail.ru"]})))
-    
+
     (testing "Query without DB"
       (is (= (d/q '[:find ?a ?b
                     :in   ?a ?b]
@@ -173,7 +185,7 @@
                 [2 :name "Petr"]]
                [])
              #{})))
-    
+
     (testing "Placeholders"
       (is (= (d/q '[:find ?x ?z
                     :in [?x _ ?z]]
@@ -183,7 +195,7 @@
                     :in [[?x _ ?z]]]
                   [[:x :y :z] [:a :b :c]])
              #{[:x :z] [:a :c]})))
-    
+
     (testing "Error reporting"
       (is (thrown-with-msg? ExceptionInfo #"Cannot bind value :a to tuple \[\?a \?b\]"
             (d/q '[:find ?a ?b :in [?a ?b]] :a)))
@@ -193,7 +205,7 @@
             (d/q '[:find ?a ?b :in [?a ?b]] [:a]))))
 
 ))
-        
+
 (deftest test-nested-bindings
   (is (= (d/q '[:find  ?k ?v
                 :in    [[?k ?v] ...]

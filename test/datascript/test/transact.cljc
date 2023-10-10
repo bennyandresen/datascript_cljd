@@ -1,10 +1,21 @@
 (ns datascript.test.transact
   (:require
-    #?(:cljs [cljs.test    :as t :refer-macros [is are deftest testing]]
-       :clj  [clojure.test :as t :refer        [is are deftest testing]])
+   #?(:cljd [cljd.test    :as t :refer        [is are deftest testing]]
+      :cljs [cljs.test    :as t :refer-macros [is are deftest testing]]
+      :clj  [clojure.test :as t :refer        [is are deftest testing]])
     [datascript.core :as d]
     [datascript.db :as db]
     [datascript.test.core :as tdc]))
+
+#?(:cljd
+   (defmacro thrown-msg? [expected-msg & body]
+     `(try
+        ~@body
+        false
+        (catch Object e
+          (or (.contains (.toString e) ~expected-msg)
+            ; rethrow for now to have a telling exception
+            (throw e))))))
 
 (deftest test-with
   (let [db  (-> (d/empty-db {:aka {:db/cardinality :db.cardinality/many}})
@@ -40,7 +51,7 @@
         (is (= (d/q '[:find ?v
                       :where [1 :name ?v]] db)
                #{["Petr"]})))))
-  
+
   (testing "Skipping nils in tx"
     (let [db (-> (d/empty-db)
                  (d/db-with [[:db/add 1 :attr 2]
@@ -61,7 +72,7 @@
               [1 :name "Oleg" d/tx0      ]]
              (map (juxt :e :a :v :tx)
                   (d/datoms db :eavt))))))
-  
+
   (testing "retraction"
     (let [db (-> (d/empty-db)
                  (d/db-with [(d/datom 1 :name "Oleg")
@@ -90,11 +101,11 @@
     (testing "Retract entitiy with incoming refs"
       (is (= (d/q '[:find ?e :where [1 :friend ?e]] db)
              #{[2]}))
-      
+
       (let [db (d/db-with db [ [:db.fn/retractEntity 2] ])]
         (is (= (d/q '[:find ?e :where [1 :friend ?e]] db)
                #{}))))
-    
+
     (let [db (d/db-with db [ [:db.fn/retractAttribute 1 :name] ])]
       (is (= (d/q '[:find ?a ?v
                     :where [1 ?a ?v]] db)
@@ -125,12 +136,12 @@
     (let [db' (d/db-with db [[:db/retract 2 :employed? false]])]
       (is (= [(db/datom 2 :employed? true)]
             (d/datoms db' :eavt 2 :employed?))))))
-  
+
 (deftest test-retract-fns-not-found
   (let [db  (-> (d/empty-db { :name { :db/unique :db.unique/identity } })
                 (d/db-with  [[:db/add 1 :name "Ivan"]]))
         all #(vec (d/datoms % :eavt))]
-    (are [op] (= [(d/datom 1 :name "Ivan")] 
+    (are [op] (= [(d/datom 1 :name "Ivan")]
                  (all (d/db-with db [op])))
       [:db/retract             2 :name "Petr"]
       [:db.fn/retractAttribute 2 :name]
@@ -139,8 +150,8 @@
       [:db/retract             [:name "Petr"] :name "Petr"]
       [:db.fn/retractAttribute [:name "Petr"] :name]
       [:db.fn/retractEntity    [:name "Petr"]])
-         
-    (are [op] (= [[] []] 
+
+    (are [op] (= [[] []]
                  [(all (d/db-with db [op]))
                   (all (d/db-with db [op op]))]) ;; idempotency
       [:db/retract             1 :name "Ivan"]
@@ -174,7 +185,7 @@
     (is (= (:weight (d/entity @conn 1)) 400))
     (is (thrown-msg? ":db.fn/cas failed on datom [1 :weight 400], expected 200"
           (d/transact! conn [[:db.fn/cas 1 :weight 200 210]]))))
-  
+
   (let [conn (d/create-conn {:label { :db/cardinality :db.cardinality/many }})]
     (d/transact! conn [[:db/add 1 :label :x]])
     (d/transact! conn [[:db/add 1 :label :y]])
@@ -381,7 +392,7 @@
             (d/datom 1 :a3 3)
             (d/datom 2 :a1 1)
             (d/datom 2 :a2 2)
-            (d/datom 2 :a3 3)] 
+            (d/datom 2 :a3 3)]
            (:tx-data report)))))
 
 (deftest test-large-ids-292
