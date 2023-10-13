@@ -62,8 +62,11 @@
   (-run [this context]
     (loop [acc acc
            datoms datoms]
+      #_(dart:core/print (pr-str :pull attr (map #(nth acc %) (range (count acc)))
+                         (first-seq datoms))
+        )
       (cond+
-        :let [^Datom datom (first-seq datoms)]
+        :let [^Datom? datom (first-seq datoms)]
 
         (or (nil? datom) (not= (.-a datom) (.-name attr)))
         [(#?(:cljd ->ResultFrame :default ResultFrame.) ((.-xform attr) (not-empty (persistent! acc))) (or datoms ()))]
@@ -71,7 +74,7 @@
         ; got limit, skip rest of the datoms
         (and (.-limit attr) (>= (count acc) (.-limit attr)))
         (loop [datoms datoms]
-          (let [^Datom datom (first-seq datoms)]
+          (let [^Datom? datom (first-seq datoms)]
             (if (or (nil? datom) (not= (.-a datom) (.-name attr)))
               [(#?(:cljd ->ResultFrame :default ResultFrame.) (persistent! acc) (or datoms ()))]
               (recur (next-seq datoms)))))
@@ -95,7 +98,7 @@
 
   (-run [this context]
     (cond+
-      :let [^Datom datom (first-seq datoms)]
+      :let [^Datom? datom (first-seq datoms)]
 
       (or (nil? datom) (not= (.-a datom) (.-name attr)))
       [(#?(:cljd ->ResultFrame :default ResultFrame.) ((.-xform attr) (not-empty (persistent! acc))) (or datoms ()))]
@@ -103,7 +106,7 @@
       ; got limit, skip rest of the datoms
       (and (.-limit attr) (>= (count acc) (.-limit attr)))
       (loop [datoms datoms]
-        (let [^Datom datom (first-seq datoms)]
+        (let [^Datom? datom (first-seq datoms)]
           (if (or (nil? datom) (not= (.-a datom) (.-name attr)))
             [(#?(:cljd ->ResultFrame :default ResultFrame.)  (persistent! acc) (or datoms ()))]
             (recur (next-seq datoms)))))
@@ -116,7 +119,7 @@
   (-str [this]
     (str "MultivalAttrFrame<attr=" (attr-str attr) ">")))
 
-(defrecord AttrsFrame [seen recursion-limits acc ^PullPattern pattern ^PullAttr attr attrs datoms id]
+(defrecord AttrsFrame [seen recursion-limits acc ^PullPattern pattern ^PullAttr? attr attrs datoms id]
   IFrame
   (-merge [this result]
     (#?(:cljd ->AttrsFrame :default AttrsFrame.)
@@ -130,7 +133,7 @@
       id))
   (-run [this context]
     (loop [acc    acc
-           attr   attr
+           ^PullAttr? attr   attr ; cljd bug except for the nil
            attrs  attrs
            datoms datoms]
       (cond+
@@ -142,7 +145,7 @@
         (and (some? attr) (= :db/id (.-name attr)))
         (recur (assoc! acc (.-as attr) ((.-xform attr) id)) (first-seq attrs) (next-seq attrs) datoms)
 
-        :let [^Datom datom (first-seq datoms)
+        :let [^Datom? datom (first-seq datoms)
               cmp          (when (and datom attr)
                              (compare (.-name attr) (.-a datom)))
               attr-ahead?  (or (nil? attr) (and cmp (pos? cmp)))
@@ -204,7 +207,7 @@
   (-str [this]
     (str "AttrsFrame<id=" id ", attr=" (attr-str attr) ", attrs=" (str/join " " (map attr-str attrs)) ">")))
 
-(defrecord ReverseAttrsFrame [seen recursion-limits acc pattern ^PullAttr attr attrs id]
+(defrecord ReverseAttrsFrame [seen recursion-limits acc pattern ^PullAttr? attr attrs id]
   IFrame
   (-merge [this result]
     (#?(:cljd ->ReverseAttrsFrame :default ReverseAttrsFrame.)
@@ -218,7 +221,7 @@
 
   (-run [this context]
     (loop [acc   acc
-           attr  attr
+           ^PullAttr? attr  attr ; cljd loop inference bug
            attrs attrs]
       (cond+
         (nil? attr)
@@ -303,8 +306,38 @@
                        to   (.-name ^PullAttr (.-last-attr pattern))]
 
                  (instance? DB db)
-                 (#?(:cljd db/set-slice :default set/slice)
-                   (.-eavt ^DB db) (db/datom id from nil db/tx0) (db/datom id to nil db/txmax))
+                 (do
+                   #_(when (= 1500 (.-limit (.-first-attr pattern)))
+                     (dart:core/print (pr-str (db/datom id from nil db/tx0) (db/datom id to nil db/txmax)))
+                     (dart:core/print (pr-str
+                                        (count (.-eavt ^DB db))
+                                        'x
+                                        (count (subseq (.-eavt ^DB db)
+                                                 >= (db/datom id from nil db/tx0)
+                                                 <= (db/datom id to nil db/txmax)))
+                                        (let [akas (for [{:flds [e a] :as d} (.-eavt ^DB db)
+                                                     :when (and (= e id) (= a from))]
+                                                     d)]
+                                          [(count akas)
+                                           (first akas) (second akas) (db/datom id from nil db/tx0)
+                                           (db/cmp-datoms-eavt (first akas) (db/datom id from nil db/tx0))
+                                           (db/cmp-datoms-eavt (first akas) (second akas))
+                                           (db/cmp-datoms-eavt (db/datom id from nil db/tx0) (first akas))
+                                           (db/cmp-datoms-eavt (last akas) (db/datom id from nil db/txmax))
+                                           (db/cmp-datoms-eavt (db/datom id from nil db/txmax) (last akas))
+                                           (count (subseq (.-eavt ^DB db)
+                                                    >= (first akas)
+                                                    <= (last akas)))])
+                                        #_(count (for [{:flds [e a] :as d} (.-eavt ^DB db)
+                                                     :when (and (= e id) (= a from))]
+                                                 d))
+                                        #_(count (->> (.-eavt ^DB db)
+                                                 (drop-while #(neg? (db/cmp-datoms-eavt % (db/datom id from nil db/tx0))))
+                                                 (take-while #(neg? (db/cmp-datoms-eavt (db/datom id to nil db/txmax) %)))))
+                                        (count (#?(:cljd db/set-slice :default set/slice)
+                                                 (.-eavt ^DB db) (db/datom id from nil db/tx0) (db/datom id to nil db/txmax))))))
+                   (#?(:cljd db/set-slice :default set/slice)
+                     (.-eavt ^DB db) (db/datom id from db/MIN db/tx0) (db/datom id to db/MAX db/txmax)))
 
                  :else
                  (->> (db/-seek-datoms db :eavt id nil nil nil))

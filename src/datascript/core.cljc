@@ -89,7 +89,7 @@
   {:pre [(de/entity? entity)]}
   (.-db entity))
 
-(def ^{:tag Entity
+(def ^{:tag Entity?
        :arglists '([e])
        :doc "Forces all entity attributes to be eagerly fetched and cached. Only usable for debug output.
 
@@ -99,7 +99,7 @@
              (entity db 1) ; => {:db/id 1}
              (touch (entity db 1)) ; => {:db/id 1, :dislikes [:pie], :likes [:pizza]}
              ```"}
-  touch de/touch)
+  touch #(de/touch %)) ; cljd bug
 
 
 ; Pull

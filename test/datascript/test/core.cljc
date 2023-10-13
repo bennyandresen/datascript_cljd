@@ -69,7 +69,10 @@
 (defn all-datoms [db]
   (into #{} (map (juxt :e :a :v)) (d/datoms db :eavt)))
 
-#?(:cljd nil
+#?(:cljd
+   (defn no-namespace-maps
+     ([])
+     ([_]))
    :clj
 (defn no-namespace-maps [t]
   (binding [*print-namespace-maps* false]

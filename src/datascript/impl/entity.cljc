@@ -261,7 +261,7 @@
       (assoc acc a (entity-attr db a part))))
     {} (partition-by :a datoms)))
 
-(defn touch [^Entity e]
+(defn touch [^Entity? e]
   {:pre [(or (nil? e) (entity? e))]}
   (when (some? e)
     (when-not @(.-touched e)

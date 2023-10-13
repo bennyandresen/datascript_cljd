@@ -512,14 +512,14 @@
         (let [args (da/aclone static-args)]
           (dotimes [i len]
             (when-some [tuple-idx (aget tuples-args i)]
-              (let [v (#?(:cljd aget :cljs da/aget :clj get) tuple tuple-idx)]
+              (let [v (#?(:cljd get :cljs da/aget :clj get) tuple tuple-idx)]
                 (#?(:cljd aset :default da/aset) args i v))))
           (apply f args)))
       (fn [tuple]
         ;; TODO raise if not all args are bound
         (dotimes [i len]
           (when-some [tuple-idx (aget tuples-args i)]
-            (let [v (#?(:cljd aget :cljs da/aget :clj get) tuple tuple-idx)]
+            (let [v (#?(:cljd get :cljs da/aget :clj get) tuple tuple-idx)]
               (#?(:cljd aset :default da/aset) static-args i v))))
         (apply f static-args)))))
 

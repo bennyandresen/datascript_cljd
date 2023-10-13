@@ -458,7 +458,16 @@
         `(let [x# ~x y# ~y]
            (if (nil? x#) 0 (if (nil? y#) 0 (long (compare x# y#))))))})
   ^#?(:cljd int :default long) [x y]
-  (if (nil? x) 0 (if (nil? y) 0 (#?(:cljd int :default long) (compare x y)))))
+  #?(:cljd
+     (cond
+       (identical? x y) 0
+       (identical? x MIN) -1
+       (identical? y MIN) 1
+       (identical? y MAX) -1
+       (identical? x MAX) 1
+       :else (int (compare x y)))
+     :default
+     (if (nil? x) 0 (if (nil? y) 0 (long (compare x y))))))
 
 #?(:cljd nil
    :default
@@ -526,19 +535,34 @@
            (class-compare x y)
            (throw e))))))
 
-(defn value-cmp
-  #?(:cljd {}
-     :clj
-     {:inline
-      (fn [x y]
-        `(let [x# ~x y# ~y]
-           (if (nil? x#) 0 (if (nil? y#) 0 (value-compare x# y#)))))})
-  ^#?(:cljd int :default long) [x y]
-  (if (nil? x)
-    0
-    (if (nil? y)
-      0
-      (value-compare x y))))
+#?(:cljd
+   (do
+     (def MIN ^:unique (Object))
+     (def MAX nil #_ ^:unique (Object))))
+
+#?(:cljd
+   (defn value-cmp
+     ^int [x y]
+     (cond
+       (identical? x y) 0
+       (identical? x MIN) -1
+       (identical? y MIN) 1
+       (identical? y MAX) -1
+       (identical? x MAX) 1
+       :else (value-compare x y)))
+   :default
+   (defn value-cmp
+     #?(:clj
+        {:inline
+         (fn [x y]
+           `(let [x# ~x y# ~y]
+              (if (nil? x#) 0 (if (nil? y#) 0 (value-compare x# y#)))))})
+     ^long [x y]
+     (if (nil? x)
+       0
+       (if (nil? y)
+         0
+         (value-compare x y)))))
 
 ;; Slower cmp-* fns allows for datom fields to be nil.
 ;; Such datoms come from slice method where they are used as boundary markers.
@@ -745,8 +769,14 @@
 
 #?(:cljd
    (do
-     (defn set-slice [s from to] (subseq s >= from <= to))
-     (defn set-rslice [s from to] (rsubseq s >= to <= from))
+     (defn ^Datom min-datom [^Datom {:flds [e a v tx]}]
+       (datom (if (nil? e) MIN e) (if (nil? a) MIN a) (if (nil? v) MIN v) tx))
+     (defn ^Datom max-datom [^Datom {:flds [e a v tx]}]
+       (datom (if (nil? e) MAX e) (if (nil? a) MAX a) (if (nil? v) MAX v) tx))
+     (defn set-slice [s ^Datom from ^Datom to]
+       (subseq s >= (min-datom from) <= (max-datom to)))
+     (defn set-rslice [s ^Datom from ^Datom to]
+       (rsubseq s >= (min-datom to) <= (max-datom from)))
      (defn ->Eduction [xform coll] (cljd.core/Eduction xform coll -1))))
 
 (defrecord-updatable DB [schema eavt aevt avet max-eid max-tx rschema pull-patterns pull-attrs hash]
@@ -1278,8 +1308,8 @@
   (let [set     (get db index)
         cmp     #?(:cljd (.-cmpf set) ; TODO add protocol?
                    :clj (.comparator ^clojure.lang.Sorted set) :cljs (.-comparator set))
-        from    (components->pattern db index c0 c1 c2 c3 e0 tx0)
-        to      (components->pattern db index c0 c1 c2 c3 emax txmax)
+        from    (min-datom (components->pattern db index c0 c1 c2 c3 e0 tx0))
+        to      (max-datom (components->pattern db index c0 c1 c2 c3 emax txmax))
         datom   (first #?(:cljd (subseq set >= from)
                           :default (set/seek (seq set) from)))]
     (when (and (some? datom) (<= 0 (cmp to datom)))

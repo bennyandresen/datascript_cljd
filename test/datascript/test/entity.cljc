@@ -1,13 +1,24 @@
 (ns datascript.test.entity
   (:require
-    [#?(:cljs cljs.reader :clj clojure.edn) :as edn]
+    [#?(:cljd cljd.reader :cljs cljs.reader :clj clojure.edn) :as edn]
     #?(:cljs [cljs.test    :as t :refer-macros [is are deftest testing]]
        :clj  [clojure.test :as t :refer        [is are deftest testing]])
     [datascript.core :as d]
     [datascript.db :as db]
     [datascript.test.core :as tdc])
-    #?(:clj
+  #?(:cljd nil
+     :clj
       (:import [clojure.lang ExceptionInfo])))
+
+#?(:cljd
+   (defmacro thrown-msg? [expected-msg & body]
+     `(try
+        ~@body
+        false
+        (catch Object e
+          (or (.contains (.toString e) ~expected-msg)
+            ; rethrow for now to have a telling exception
+            (throw e))))))
 
 (t/use-fixtures :once tdc/no-namespace-maps)
 
@@ -102,7 +113,7 @@
     (is (= nil (:comp (d/entity db 1))))
     (is (= nil (:multiref (d/entity db 1))))
     (is (= nil (:multicomp (d/entity db 1))))))
-  
+
 (deftest test-entity-misses
   (let [db (-> (d/empty-db {:name {:db/unique :db.unique/identity}})
              (d/db-with [{:db/id 1, :name "Ivan"}

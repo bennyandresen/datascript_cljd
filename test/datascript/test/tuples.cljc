@@ -1,10 +1,22 @@
 (ns datascript.test.tuples
   (:require
-    #?(:cljs [cljs.test    :as t :refer-macros [is are deftest testing]]
-       :clj  [clojure.test :as t :refer        [is are deftest testing]])
-    [datascript.core :as d]
-    [datascript.test.core :as tdc])
-  (:import #?(:clj [clojure.lang ExceptionInfo])))
+   #?(:cljd  [cljd.test :as t :refer        [is are deftest testing]]
+      :cljs [cljs.test    :as t :refer-macros [is are deftest testing]]
+      :clj  [clojure.test :as t :refer        [is are deftest testing]])
+   [cljd.core :refer [ExceptionInfo]]
+   [datascript.core :as d]
+   [datascript.test.core :as tdc])
+  (:import #?(:cljd nil :clj [clojure.lang ExceptionInfo])))
+
+#?(:cljd
+   (defmacro thrown-msg? [expected-msg & body]
+     `(try
+        ~@body
+        false
+        (catch Object e#
+          (or (.contains (or (.-message (identity e#)) (.toString e#)) ~expected-msg)
+            ; rethrow for now to have a telling exception
+            (throw e#))))))
 
 (deftest test-schema
   (let [db (d/empty-db
@@ -192,7 +204,7 @@
              [2 :b "b"]
              [2 :a+b ["a" "b"]]
              [2 :c "c"]}
-          (tdc/all-datoms (d/db conn))))  
+          (tdc/all-datoms (d/db conn))))
 
     (is (thrown-msg? "Conflicting upserts: [:a+b [\"A\" \"B\"]] resolves to 1, but [:c \"c\"] resolves to 2"
           (d/transact! conn [{:a+b ["A" "B"] :c "c"}])))
@@ -232,7 +244,7 @@
              [2 :b "b"]
              [2 :a+b ["a" "b"]]
              [2 :c "c"]}
-          (tdc/all-datoms (d/db conn))))  
+          (tdc/all-datoms (d/db conn))))
 
     (is (thrown-with-msg? ExceptionInfo #"Cannot add .* because of unique constraint: .*"
           (d/transact! conn [[:db/add [:a+b ["A" "B"]] :c "c"]])))
