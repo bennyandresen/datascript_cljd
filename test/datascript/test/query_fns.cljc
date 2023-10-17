@@ -1,12 +1,26 @@
 (ns datascript.test.query-fns
   (:require
-    #?(:cljs [cljs.test    :as t :refer-macros [is are deftest testing]]
+    #?(:cljd  [cljd.test :as t :refer        [is are deftest testing]]
+       :cljs [cljs.test    :as t :refer-macros [is are deftest testing]]
        :clj  [clojure.test :as t :refer        [is are deftest testing]])
     [datascript.core :as d]
     [datascript.db :as db]
     [datascript.test.core :as tdc])
-#?(:clj
+#?(:cljd (:require [cljd.core :refer [ExceptionInfo]])
+   :clj
    (:import [clojure.lang ExceptionInfo])))
+
+#?(:cljd
+   (defmacro thrown-msg? [expected-msg & body]
+     `(try
+        ~@body
+        false
+        (catch Object e#
+          ; the second or is not correct, the second branch can't be reached
+          (or (.contains (or (.-message (identity e#)) (.toString e#)) ~expected-msg)
+            ; rethrow for now to have a telling exception
+            (throw e#))))))
+
 
 (deftest test-query-fns
   (testing "predicate without free variables"
@@ -30,7 +44,7 @@
                     :where [?e :age ?age]
                            [(get-else $ ?e :height 300) ?height]] db)
              #{[1 15 300] [2 22 240] [3 37 300]}))
-      
+
       (is (thrown-with-msg? ExceptionInfo #"get-else: nil default value is not supported"
             (d/q '[:find ?e ?height
                     :where [?e :age]
@@ -79,25 +93,28 @@
        (is (= (d/q '[:find  ?a1
                      :where [_ :age ?a1]
                             [(>= ?a1 22)]] db)
-              #{[22] [37]}))      
+              #{[22] [37]}))
        (testing "compare values of different types"
-         (is (= (d/q '[:find  ?e
-                       :where [?e]
-                       [(< ?e 1)]] [[0] [1] [""]])
-                #{[0]}))
-         (is (= (d/q '[:find  ?e
-                       :where [?e]
-                       [(<= ?e 1)]] [[0] [1] [""]])
-                #{[0] [1]}))
-         (is (= (d/q '[:find  ?e
-                       :where [?e]
-                       [(> ?e 1)]] [[0] [1] [""]])
-                #{[""]}))
-         (is (= (d/q '[:find  ?e
-                       :where [?e]
-                       [(>= ?e 1)]] [[0] [1] [""]])
-                #{[1] [""]})))
-      
+         (let [inputs [[0] [1] [""]]
+               expect (fn [op v]
+                        (set (filter (fn [[x]] (op (db/value-compare x v) 0)) inputs)))]
+           (is (= (d/q '[:find  ?e
+                         :where [?e]
+                         [(< ?e 1)]] inputs)
+                 (expect < 1)))
+           (is (= (d/q '[:find  ?e
+                         :where [?e]
+                         [(<= ?e 1)]] inputs)
+                 (expect <= 1)))
+           (is (= (d/q '[:find  ?e
+                         :where [?e]
+                         [(> ?e 1)]] inputs)
+                 (expect > 1)))
+           (is (= (d/q '[:find  ?e
+                         :where [?e]
+                         [(>= ?e 1)]] inputs)
+                 (expect >= 1)))))
+
       (is (= (d/q '[:find  ?x ?c
                     :in    [?x ...]
                     :where [(count ?x) ?c]]
@@ -196,7 +213,7 @@
                            [(+ ?x 100) ?y]]
                   [[0 :age 15] [1 :age 35]])
              #{})))
-    
+
     (testing "Returning nil from function filters out tuple from result"
       (is (= (d/q '[:find ?x
                     :in    [?in ...] ?f
@@ -223,7 +240,7 @@
                     :where [(ground ?in) [[?x _ ?z]...]]]
                   [[:a :b :c] [:d :e :f]])
              #{[:a :c] [:d :f]}))
-      
+
       (is (= (d/q '[:find ?in
                     :in [?in ...]
                     :where [(ground ?in) _]]
@@ -251,7 +268,7 @@
               [?e2 :name]
               [(< ?e ?e2)]]
       #{[1 2] [1 3] [1 4] [2 3] [2 4] [3 4]}
-         
+
       ;; join with extra symbols
       [:find  ?e ?e2
        :where [?e  :age ?a]
@@ -295,7 +312,7 @@
                :in   [?e ...]
                :where [(fun ?e)]]
              [1])))
-  
+
   (is (thrown-msg? "Unknown function 'fun in [(fun ?e) ?x]"
         (d/q '[:find ?e ?x
                :in   [?e ...]
@@ -316,7 +333,7 @@
 
   (is (thrown-msg? "Where uses unknown source vars: [$]"
         (d/q '[:find  ?x
-               :in    $2 
+               :in    $2
                :where [$2 ?x] [(zero? $ ?x)]]))))
 
 (deftest test-issue-180
@@ -329,7 +346,8 @@
 
 (defn sample-query-fn [] 42)
 
-#?(:clj
+#?(:cljd nil
+   :clj
 (deftest test-symbol-resolution
   (is (= 42 (d/q '[:find ?x .
                    :where [(datascript.test.query-fns/sample-query-fn) ?x]])))))

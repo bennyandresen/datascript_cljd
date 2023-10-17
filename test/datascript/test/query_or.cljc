@@ -1,12 +1,25 @@
 (ns datascript.test.query-or
   (:require
-    #?(:cljs [cljs.test    :as t :refer-macros [is are deftest testing]]
+    #?(:cljd  [cljd.test :as t :refer        [is are deftest testing]]
+       :cljs [cljs.test    :as t :refer-macros [is are deftest testing]]
        :clj  [clojure.test :as t :refer        [is are deftest testing]])
     [datascript.core :as d]
     [datascript.db :as db]
     [datascript.test.core :as tdc])
-    #?(:clj
-      (:import [clojure.lang ExceptionInfo])))
+#?(:cljd (:require [cljd.core :refer [ExceptionInfo]])
+   :clj
+   (:import [clojure.lang ExceptionInfo])))
+
+#?(:cljd
+   (defmacro thrown-msg? [expected-msg & body]
+     `(try
+        ~@body
+        false
+        (catch Object e#
+          ; the second or is not correct, the second branch can't be reached
+          (or (.contains (or (.-message (identity e#)) (.toString e#)) ~expected-msg)
+            ; rethrow for now to have a telling exception
+            (throw e#))))))
 
 (def test-db
   (delay
@@ -26,23 +39,23 @@
     [(or [?e :name "Oleg"]
          [?e :age 10])]
     #{1 3 4 5}
-         
+
     ;; one branch empty
     [(or [?e :name "Oleg"]
          [?e :age 30])]
     #{3 4}
-        
+
     ;; both empty
     [(or [?e :name "Petr"]
          [?e :age 30])]
     #{}
-         
+
     ;; join with 1 var
     [[?e :name "Ivan"]
      (or [?e :name "Oleg"]
          [?e :age 10])]
     #{1 5}
-      
+
     ;; join with 2 vars
     [[?e :age ?a]
      (or (and [?e :name "Ivan"]
@@ -75,7 +88,7 @@
        (and [?e :age ?a]
             [?e :name ?n]))]
     #{1 2 3 4 5 6}
-       
+
     [[?e  :name ?a]
      [?e2 :name ?a]
      (or-join [?e]
@@ -146,22 +159,22 @@
       [[?e :name]
        (or [?e :name "Ivan"])]
       #{1}
-      
+
       ;; OR can reference any source
       [[?e :name]
        (or [$2 ?e :age 10])]
       #{1}
-      
+
       ;; OR can change default source
       [[?e :name]
        ($2 or [?e :age 10])]
       #{1}
-      
+
       ;; even with another default source, it can reference any other source explicitly
       [[?e :name]
        ($2 or [$ ?e :name "Ivan"])]
       #{1}
-      
+
       ;; nested OR keeps the default source
       [[?e :name]
        ($2 or (or [?e :age 10]))]

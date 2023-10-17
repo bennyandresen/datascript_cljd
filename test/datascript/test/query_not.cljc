@@ -1,13 +1,23 @@
 (ns datascript.test.query-not
   (:require
-    #?(:cljs [cljs.test    :as t :refer-macros [is are deftest testing]]
+    #?(:cljd  [cljd.test :as t :refer        [is are deftest testing]]
+       :cljs [cljs.test    :as t :refer-macros [is are deftest testing]]
        :clj  [clojure.test :as t :refer        [is are deftest testing]])
     [datascript.core :as d]
     [datascript.db :as db]
-    [datascript.test.core :as tdc])
-    #?(:clj
-      (:import [clojure.lang ExceptionInfo])))
+    [datascript.test.core :as tdc]))
 
+
+#?(:cljd
+   (defmacro thrown-msg? [expected-msg & body]
+     `(try
+        ~@body
+        false
+        (catch Object e#
+          ; the second or is not correct, the second branch can't be reached
+          (or (.contains (or (.-message (identity e#)) (.toString e#)) ~expected-msg)
+            ; rethrow for now to have a telling exception
+            (throw e#))))))
 
 (def test-db
   (delay
@@ -26,34 +36,34 @@
     [[?e :name]
      (not [?e :name "Ivan"])]
     #{3 4}
-    
+
     [[?e :name]
      (not
        [?e :name "Ivan"]
        [?e :age  10])]
     #{2 3 4 6}
-       
+
     [[?e :name]
      (not [?e :name "Ivan"])
      (not [?e :age 10])]
     #{4}
-  
+
     ;; full exclude
     [[?e :name]
      (not [?e :age])]
     #{}
-       
+
     ;; not-intersecting rels
     [[?e :name "Ivan"]
      (not [?e :name "Oleg"])]
     #{1 2 5 6}
-    
+
     ;; exclude empty set
     [[?e :name]
      (not [?e :name "Ivan"]
           [?e :name "Oleg"])]
     #{1 2 3 4 5 6}
-    
+
     ;; nested excludes
     [[?e :name]
      (not [?e :name "Ivan"]
@@ -77,7 +87,7 @@
        [?e :name "Oleg"]
        [?e :age ?a])]
     #{[1 10] [2 20] [5 10] [6 20]}
-    
+
     [[?e :age  ?a]
      [?e :age  10]
      (not-join [?e]
@@ -86,7 +96,7 @@
        [?e :age  10])]
     #{[1 10] [5 10]}))
 
-  
+
 (deftest test-default-source
   (let [db1 (d/db-with (d/empty-db)
              [ [:db/add 1 :name "Ivan" ]
@@ -104,22 +114,22 @@
       [[?e :name]
        (not [?e :name "Ivan"])]
       #{2}
-      
+
       ;; NOT can reference any source
       [[?e :name]
        (not [$2 ?e :age 10])]
       #{2}
-      
+
       ;; NOT can change default source
       [[?e :name]
        ($2 not [?e :age 10])]
       #{2}
-      
+
       ;; even with another default source, it can reference any other source explicitly
       [[?e :name]
        ($2 not [$ ?e :name "Ivan"])]
       #{2}
-      
+
       ;; nested NOT keeps the default source
       [[?e :name]
        ($2 not (not [?e :age 10]))]
@@ -140,14 +150,14 @@
             [?e :age  10]
             (not [?e :age 20])]
     #{[3]}
-    
+
     ;; const \ const
     [:find ?e
      :where [?e :name "Oleg"]
             [?e :age  10]
             (not [?e :age 10])]
     #{}
-       
+
     ;; rel \ const
     [:find ?e
      :where [?e :name "Oleg"]
@@ -186,13 +196,13 @@
     [(not [?e :name "Ivan"])
      [?e :name]]
     "Insufficient bindings: none of #{?e} is bound in (not [?e :name \"Ivan\"])"
-    
+
     [[?e :name]
      (not-join [?e]
        (not [1 :age ?a])
        [?e :age ?a])]
     "Insufficient bindings: none of #{?a} is bound in (not [1 :age ?a])"
-    
+
     [[?e :name]
      (not [?a :name "Ivan"])]
     "Insufficient bindings: none of #{?a} is bound in (not [?a :name \"Ivan\"])"

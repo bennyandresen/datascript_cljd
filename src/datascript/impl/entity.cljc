@@ -207,7 +207,7 @@
        (invoke [e k not-found] (lookup-entity e k not-found))
        ]))
 
-(defn entity? [x] #(instance? Entity x))
+(defn entity? [x] (instance? Entity x))
 
 #?(:cljd nil
    :clj

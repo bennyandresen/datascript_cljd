@@ -1,6 +1,7 @@
 (ns datascript.test.query-return-map
   (:require
-    #?(:cljs [cljs.test    :as t :refer-macros [is are deftest testing]]
+    #?(:cljd  [cljd.test :as t :refer        [is are deftest testing]]
+       :cljs [cljs.test    :as t :refer-macros [is are deftest testing]]
        :clj  [clojure.test :as t :refer        [is are deftest testing]])
     [datascript.core :as d]
     [datascript.db :as db]
@@ -42,5 +43,3 @@
                        [?e :age  ?age]]
            test-db)
         {:n "Ivan" :a 25})))
-
-

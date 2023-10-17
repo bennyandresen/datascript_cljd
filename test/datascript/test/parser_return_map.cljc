@@ -1,11 +1,22 @@
 (ns datascript.test.parser-return-map
   (:require
-    #?(:cljs [cljs.test    :as t :refer-macros [is are deftest testing]]
-       :clj  [clojure.test :as t :refer        [is are deftest testing]])
-    [datascript.core :as d]
+   #?(:cljd  [cljd.test :as t :refer        [is are deftest testing]]
+      :cljs [cljs.test    :as t :refer-macros [is are deftest testing]]
+      :clj  [clojure.test :as t :refer        [is are deftest testing]])    [datascript.core :as d]
     [datascript.parser :as dp]
     [datascript.db :as db]
     [datascript.test.core :as tdc]))
+
+
+#?(:cljd
+   (defmacro thrown-msg? [expected-msg & body]
+     `(try
+        ~@body
+        false
+        (catch Object e#
+          (or (.contains (or (.-message (identity e#)) (.toString e#)) ~expected-msg)
+            ; rethrow for now to have a telling exception
+            (throw e#))))))
 
 #?(:cljs
    (def Throwable js/Error))

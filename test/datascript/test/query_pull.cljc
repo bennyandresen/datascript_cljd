@@ -1,6 +1,7 @@
 (ns datascript.test.query-pull
   (:require
-    #?(:cljs [cljs.test    :as t :refer-macros [is are deftest testing]]
+    #?(:cljd  [cljd.test :as t :refer        [is are deftest testing]]
+       :cljs [cljs.test    :as t :refer-macros [is are deftest testing]]
        :clj  [clojure.test :as t :refer        [is are deftest testing]])
     [datascript.core :as d]
     [datascript.db :as db]
@@ -41,7 +42,7 @@
                              res)
     '[(pull ?e ?pattern)] [:name]
     #{[{:name "Ivan"}] [{:name "Petr"}]}
-       
+
     '[?e ?a ?pattern (pull ?e ?pattern)] [:name]
     #{[2 25 [:name] {:name "Ivan"}] [1 44 [:name] {:name "Petr"}]}))
 
@@ -65,13 +66,13 @@
                        :where [$1 ?e :age 25]]
                      db1 db2))
            #{[1 {:name "Ivan"}]}))
-    
+
     (is (= (set (d/q '[:find ?e (pull $2 ?e [:name])
                        :in $1 $2
                        :where [$2 ?e :age 25]]
                      db1 db2))
            #{[1 {:name "Petr"}]}))
-    
+
     (testing "$ is default source"
       (is (= (set (d/q '[:find ?e (pull ?e [:name])
                          :in $1 $
@@ -84,7 +85,7 @@
                 :where [?e :age 25]]
                 test-db)
          {:name "Ivan"}))
-       
+
   (is (= (set (d/q '[:find [(pull ?e [:name]) ...]
                      :where [?e :age ?a]]
                      test-db))

@@ -1,20 +1,24 @@
 (ns datascript.test.serialize
   (:require
-   [#?(:cljs cljs.reader :clj clojure.edn) :as edn]
-   #?(:cljs [cljs.test    :as t :refer-macros [is are deftest testing]]
+   [#?(:cljd cljd.reader :cljs cljs.reader :clj clojure.edn) :as edn]
+   #?(:cljd  [cljd.test :as t :refer        [is are deftest testing]]
+      :cljs [cljs.test    :as t :refer-macros [is are deftest testing]]
       :clj  [clojure.test :as t :refer        [is are deftest testing]])
    [datascript.core :as d]
    [datascript.db :as db]
    [datascript.test.core :as tdc]
-   #?(:clj [cheshire.core :as cheshire])
-   #?(:clj [jsonista.core :as jsonista]))
-   #?(:clj
+   #?(:cljd nil :clj [cheshire.core :as cheshire])
+   #?(:cljd nil :clj [jsonista.core :as jsonista]))
+  #?(:cljd
+     (:require [cljd.core :refer [ExceptionInfo]])
+     :clj
       (:import [clojure.lang ExceptionInfo])))
 
 (t/use-fixtures :once tdc/no-namespace-maps)
 
 (def readers
-  { #?@(:cljs ["cljs.reader/read-string"  cljs.reader/read-string]
+  { #?@(:cljd ["cljd.reader/read-string"  cljd.reader/read-string]
+        :cljs ["cljs.reader/read-string"  cljs.reader/read-string]
         :clj  ["clojure.edn/read-string"  #(clojure.edn/read-string {:readers d/data-readers} %)
                "clojure.core/read-string" #(binding [*data-readers* (merge *data-readers* d/data-readers)]
                                              (read-string %))]) })
@@ -25,11 +29,11 @@
       (let [d (db/datom 1 :name "Oleg" 17 true)]
         (is (= (pr-str d) "#datascript/Datom [1 :name \"Oleg\" 17 true]"))
         (is (= d (read-fn (pr-str d)))))
-      
+
       (let [d (db/datom 1 :name 3)]
         (is (= (pr-str d) "#datascript/Datom [1 :name 3 536870912 true]"))
         (is (= d (read-fn (pr-str d)))))
-      
+
       (let [db (-> (d/empty-db {:name {:db/unique :db.unique/identity}})
                    (d/db-with [ [:db/add 1 :name "Petr"]
                                 [:db/add 1 :age 44] ])
@@ -72,7 +76,7 @@
    [30 :url    "https://" ]])
 
 
-(def schema 
+(def schema
   { :name    { } ;; nothing special about name
     :aka     { :db/cardinality :db.cardinality/many }
     :age     { :db/index true }
@@ -99,7 +103,7 @@
       (let [assertions [ [:db/add -1 :name "Lex"] ]]
         (is (= (d/db-with db-init assertions)
                (d/db-with db-transact assertions)))))
-    
+
     (testing "Roundtrip"
       (doseq [[r read-fn] readers]
         (testing r

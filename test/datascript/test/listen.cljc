@@ -1,6 +1,7 @@
 (ns datascript.test.listen
   (:require
-    #?(:cljs [cljs.test    :as t :refer-macros [is are deftest testing]]
+    #?(:cljd  [cljd.test :as t :refer        [is are deftest testing]]
+       :cljs [cljs.test    :as t :refer-macros [is are deftest testing]]
        :clj  [clojure.test :as t :refer        [is are deftest testing]])
     [datascript.core :as d]
     [datascript.db :as db]
@@ -21,7 +22,7 @@
                        [:db/retract 4 :name "Evgeny"]])
     (d/unlisten! conn :test)
     (d/transact! conn [[:db/add -1 :name "Geogry"]])
-    
+
     (is (= (:tx-data (first @reports))
            [(db/datom 3 :name "Dima"   (+ d/tx0 2) true)
             (db/datom 3 :age 19        (+ d/tx0 2) true)

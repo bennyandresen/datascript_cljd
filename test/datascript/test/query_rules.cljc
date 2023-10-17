@@ -1,10 +1,22 @@
 (ns datascript.test.query-rules
   (:require
-    #?(:cljs [cljs.test    :as t :refer-macros [is are deftest testing]]
+    #?(:cljd  [cljd.test :as t :refer        [is are deftest testing]]
+       :cljs [cljs.test    :as t :refer-macros [is are deftest testing]]
        :clj  [clojure.test :as t :refer        [is are deftest testing]])
     [datascript.core :as d]
     [datascript.db :as db]
     [datascript.test.core :as tdc]))
+
+#?(:cljd
+   (defmacro thrown-msg? [expected-msg & body]
+     `(try
+        ~@body
+        false
+        (catch Object e#
+          ; the second or is not correct, the second branch can't be reached
+          (or (.contains (or (.-message (identity e#)) (.toString e#)) ~expected-msg)
+            ; rethrow for now to have a telling exception
+            (throw e#))))))
 
 (deftest test-rules
   (let [db [                  [5 :follow 3]
@@ -17,7 +29,7 @@
                '[[(follow ?x ?y)
                   [?x :follow ?y]]])
            #{[1 2] [2 3] [3 4] [2 4] [5 3] [4 6]}))
-    
+
     (testing "Joining regular clauses with rule"
       (is (= (d/q '[:find ?y ?x
                     :in $ %
@@ -28,7 +40,7 @@
                   '[[(rule ?a ?b)
                      [?a :follow ?b]]])
              #{[3 2] [6 4] [4 2]})))
-    
+
     (testing "Rule context is isolated from outer context"
       (is (= (d/q '[:find ?x
                     :in $ %
@@ -123,7 +135,7 @@
                      [(?pred ?e2)]]]
                   even?)
              #{[4 6] [2 4]})))
-    
+
     (testing "Using built-ins inside rule"
       (is (= (d/q '[:find ?x ?y
                     :in $ %
@@ -177,7 +189,7 @@
 
 ;; https://github.com/tonsky/datascript/issues/218
 (deftest test-false-arguments
-  (let [db    (d/db-with (d/empty-db) 
+  (let [db    (d/db-with (d/empty-db)
                 [[:db/add 1 :attr true]
                  [:db/add 2 :attr false]])
         rules '[[(is ?id ?val)
