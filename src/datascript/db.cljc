@@ -1247,9 +1247,11 @@
      (.write sink ":schema ")
      (-print (-schema db) sink)
      (.write sink (str ", :datoms ["))
-     (doseq [d (-datoms db :eavt nil nil nil nil)]
-       ; todo put spaces
-       (-print [(.-e d) (.-a d) (.-v d) (datom-tx d)] sink))
+     (loop [[d & more] (-datoms db :eavt nil nil nil nil)]
+       (-print [(.-e d) (.-a d) (.-v d) (datom-tx d)] sink)
+       (when more
+         (.write sink " ")
+         (recur more)))
      (.write sink "]}"))
    :cljs
    (defn+ pr-db [db w opts]
