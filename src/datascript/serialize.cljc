@@ -73,9 +73,9 @@
 
 (defn- amap [f xs]
   #?(:cljd
-     (let [^List xs xs]
-       (areduce xs i arr (.filled #/(List dynamic) (count xs) nil)
-         (doto arr (aset i (f (aget xs i))))))
+     (let [arr (.filled #/(List dynamic) (count xs) nil)]
+       (reduce (fn [idx x] (aset arr idx (f x)) (inc idx)) 0 xs)
+       arr)
      :clj
      (let [arr (java.util.ArrayList. (count xs))]
        (reduce (fn [idx x] (.add arr (f x)) (inc idx)) 0 xs)
@@ -87,9 +87,9 @@
 
 (defn- amap-indexed [f xs]
   #?(:cljd
-     (let [^List xs xs]
-       (areduce xs i arr (.filled #/(List dynamic) (count xs) nil)
-         (doto arr (aset i (f i (aget xs i))))))
+     (let [arr (.filled #/(List dynamic) (count xs) nil)]
+       (reduce (fn [idx x] (aset arr idx (f idx x)) (inc idx)) 0 xs)
+       arr)
      :clj
      (let [arr (java.util.ArrayList. (count xs))]
        (reduce (fn [idx x] (.add arr (f idx x)) (inc idx)) 0 xs)
@@ -107,9 +107,6 @@
     (<= (compare (.-a d1) (.-a d2)) 0) -1
     true 1))
 
-#?(:cljd
-   (defn set-slice [s from to _] (subseq s >= from <= to)))
-
 (defn- all-attrs
   "All attrs in a DB, distinct, sorted"
   [db]
@@ -117,9 +114,10 @@
     []
     (loop [attrs (transient [(:a (first (:aevt db)))])]
       (let [attr      (nth attrs (dec (count attrs)))
-            left      (db/datom 0 attr nil)
-            right     (db/datom db/emax nil nil)
-            next-attr (:a (first (#?(:cljd set-slice :default set/slice) (:aevt db) left right attr-comparator)))]
+            left      (db/min-datom (db/datom db/emax attr nil))
+            right     (db/max-datom (db/datom db/emax nil nil))
+            next-attr (:a (first #?(:cljd (subseq (:aevt db) > left <= right)
+                                    :default (set/slice (:aevt db) left right attr-comparator))))]
         (if (some? next-attr)
           (recur (conj! attrs next-attr))
           (persistent! attrs))))))

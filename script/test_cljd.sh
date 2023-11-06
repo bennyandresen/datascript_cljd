@@ -10,7 +10,7 @@ cat > tmp/cljdtests/deps.edn <<EOF
  :deps {org.clojure/clojure {:mvn/version "1.11.1"}
         tensegritics/clojuredart
         {:git/url "https://github.com/tensegritics/ClojureDart.git"
-         :sha "414b57018448c752ce9f7fb76f1c0fcbc4d79125"}
+         :sha "9e500d9170351dd5947732dca9703f07f9b15c01"}
         io.github.wevre/transit-cljd {:git/url "https://github.com/Roam-Research/transit-cljd.git"
                                       :sha "9d4511f0ef50705641b084f432bab726c64a8832"}
         datascript/datascript {:local/root "../../"}}
