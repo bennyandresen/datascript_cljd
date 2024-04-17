@@ -165,14 +165,14 @@
                               [idx-b (attrs-a sym)]))
             tlen    (->> (vals attrs-a) (reduce max) (inc))
             tuples' (persistent!
-                      (reduce
-                        (fn [acc tuple-b]
-                          (let [tuple' (make-array tlen)]
-                            (doseq [[idx-b idx-a] idxb->idxa]
-                              (aset tuple' idx-a (#?(:cljs da/aget :clj get) tuple-b idx-b)))
-                            (conj! acc tuple')))
-                        (transient (vec tuples-a))
-                        tuples-b))]
+                     (reduce
+                      (fn [acc tuple-b]
+                        (let [tuple' (make-array tlen)]
+                          (doseq [[idx-b idx-a] idxb->idxa]
+                            (aset tuple' idx-a (#?(:cljs da/aget :clj get :cljd get) tuple-b idx-b)))
+                          (conj! acc tuple')))
+                      (transient (vec tuples-a))
+                      tuples-b))]
         (->Relation attrs-a tuples'))
 
       :else
@@ -405,7 +405,7 @@
                        tuples2
                        (reduce (fn outer [acc tuple2]
                                  (let [key (key-fn2 tuple2)]
-                                   (if-some [tuples1 #?(:clj (hash key) :cljs (get hash key))]
+                                   (if-some [tuples1 #?(:clj (hash key) :cljs (get hash key) :cljd (hash key))]
                                      (reduce (fn inner [acc tuple1]
                                                (conj! acc (join-tuples tuple1 keep-idxs1 tuple2 keep-idxs2)))
                                              acc tuples1)
@@ -413,7 +413,7 @@
                                (transient []) )
                        (persistent!))]
     (->Relation (zipmap (concat keep-attrs1 keep-attrs2) (range))
-               new-tuples)))
+                new-tuples)))
 
 (defn subtract-rel [a b]
   (let [{attrs-a :attrs, tuples-a :tuples} a
@@ -480,7 +480,7 @@
 (defn- context-resolve-val [context sym]
   (when-some [rel (rel-with-attr context sym)]
     (when-some [tuple (first (:tuples rel))]
-      (#?(:cljs da/aget :clj get) tuple ((:attrs rel) sym)))))
+      (#?(:cljs da/aget :clj get :cljd get) tuple ((:attrs rel) sym)))))
 
 (defn- rel-contains-attrs? [rel attrs]
   (some #(contains? (:attrs rel) %) attrs))
@@ -506,6 +506,7 @@
     ;; CLJS `apply` + `vector` will hold onto mutable array of arguments directly
     ;; https://github.com/tonsky/datascript/issues/262
     (if #?(:clj  false
+           :cljd false
            :cljs (identical? f vector))
       (fn [tuple]
         ;; TODO raise if not all args are bound
