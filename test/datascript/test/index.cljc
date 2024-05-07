@@ -3,78 +3,69 @@
    #?(:cljd [cljd.test    :as t :refer        [is are deftest testing]]
       :cljs [cljs.test    :as t :refer-macros [is are deftest testing]]
       :clj  [clojure.test :as t :refer        [is are deftest testing]])
-    [datascript.core :as d]
-    [datascript.db :as db]
-    [datascript.test.core :as tdc]))
-
-#?(:cljd
-   (defmacro thrown-msg? [expected-msg & body]
-     `(try
-        ~@body
-        false
-        (catch Object e
-          (or (.contains (.toString e) ~expected-msg)
-            ; rethrow for now to have a telling exception
-            (throw e))))))
+   [datascript.core :as d]
+   [datascript.db :as db]
+   [cljd.core :refer [ExceptionInfo]]
+   [datascript.test.core :as tdc :refer [thrown-msg?]]))
 
 (deftest test-datoms
   (let [dvec #(vector (:e %) (:a %) (:v %))
         db (-> (d/empty-db {:age {:db/index true}})
                (d/db-with [ [:db/add 1 :name "Petr"]
-                            [:db/add 1 :age 44]
-                            [:db/add 2 :name "Ivan"]
-                            [:db/add 2 :age 25]
-                            [:db/add 3 :name "Sergey"]
-                            [:db/add 3 :age 11] ]))]
+                           [:db/add 1 :age 44]
+                           [:db/add 2 :name "Ivan"]
+                           [:db/add 2 :age 25]
+                           [:db/add 3 :name "Sergey"]
+                           [:db/add 3 :age 11] ]))]
     (testing "Main indexes, sort order"
       (is (= [ [1 :age 44]
-               [2 :age 25]
-               [3 :age 11]
-               [1 :name "Petr"]
-               [2 :name "Ivan"]
-               [3 :name "Sergey"] ]
+              [2 :age 25]
+              [3 :age 11]
+              [1 :name "Petr"]
+              [2 :name "Ivan"]
+              [3 :name "Sergey"] ]
              (map dvec (d/datoms db :aevt))))
 
       (is (= [ [1 :age 44]
-               [1 :name "Petr"]
-               [2 :age 25]
-               [2 :name "Ivan"]
-               [3 :age 11]
-               [3 :name "Sergey"] ]
+              [1 :name "Petr"]
+              [2 :age 25]
+              [2 :name "Ivan"]
+              [3 :age 11]
+              [3 :name "Sergey"] ]
              (map dvec (d/datoms db :eavt))))
 
       (is (= [ [3 :age 11]
-               [2 :age 25]
-               [1 :age 44] ]
+              [2 :age 25]
+              [1 :age 44] ]
              (map dvec (d/datoms db :avet))))) ;; name non-indexed, excluded from avet
 
     (testing "Components filtration"
       (is (= [ [1 :age 44]
-               [1 :name "Petr"] ]
+              [1 :name "Petr"] ]
              (map dvec (d/datoms db :eavt 1))))
 
       (is (= [ [1 :age 44] ]
              (map dvec (d/datoms db :eavt 1 :age))))
 
       (is (= [ [3 :age 11]
-               [2 :age 25]
-               [1 :age 44] ]
+              [2 :age 25]
+              [1 :age 44] ]
              (map dvec (d/datoms db :avet :age)))))
 
     (testing "Error reporting"
       (d/datoms db :avet) ;; no error
 
       (is (thrown-msg? "Attribute :name should be marked as :db/index true"
-            (d/datoms db :avet :name)))
+                       (d/datoms db :avet :name)))
 
       (is (thrown-msg? "Attribute :alias should be marked as :db/index true"
-            (d/datoms db :avet :alias)))
+                       (d/datoms db :avet :alias)))
 
       (is (thrown-msg? "Attribute :name should be marked as :db/index true"
-            (d/datoms db :avet :name "Ivan")))
+                       (d/datoms db :avet :name "Ivan")))
 
       (is (thrown-msg? "Attribute :name should be marked as :db/index true"
-            (d/datoms db :avet :name "Ivan" 1))))))
+                       (d/datoms db :avet :name "Ivan" 1))))))
 
 (deftest test-datom
   (let [dvec #(when % (vector (:e %) (:a %) (:v %)))

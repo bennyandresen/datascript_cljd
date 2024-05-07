@@ -1,22 +1,14 @@
 (ns datascript.test.components
   (:require
-    [#?(:cljd cljd.reader :cljs cljs.reader :clj clojure.edn) :as edn]
-    #?(:cljd  [cljd.test :as t :refer        [is are deftest testing]]
-       :cljs [cljs.test    :as t :refer-macros [is are deftest testing]]
-       :clj  [clojure.test :as t :refer        [is are deftest testing]])
-    [datascript.core :as d]
-    [datascript.db :as db]
-    [datascript.test.core :as tdc]))
+   [#?(:cljd cljd.reader :cljs cljs.reader :clj clojure.edn) :as edn]
+   #?(:cljd  [cljd.test :as t :refer        [is are deftest testing]]
+      :cljs [cljs.test    :as t :refer-macros [is are deftest testing]]
+      :clj  [clojure.test :as t :refer        [is are deftest testing]])
+   [datascript.core :as d]
+   [datascript.db :as db]
+   [cljd.core :refer [ExceptionInfo]]
+   [datascript.test.core :as tdc :refer [thrown-msg?]]))
 
-#?(:cljd
-   (defmacro thrown-msg? [expected-msg & body]
-     `(try
-        ~@body
-        false
-        (catch Object e#
-          (or (.contains (or (.-message (identity e#)) (.toString e#)) ~expected-msg)
-            ; rethrow for now to have a telling exception
-            (throw e#))))))
 
 (t/use-fixtures :once tdc/no-namespace-maps)
 

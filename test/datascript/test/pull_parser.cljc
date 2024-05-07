@@ -3,34 +3,25 @@
    #?(:cljd  [cljd.test :as t :refer        [is are deftest testing]]
       :cljs [cljs.test    :as t :refer-macros [is are deftest testing]]
       :clj  [clojure.test :as t :refer        [is are deftest testing]])
-    [datascript.core :as d]
-    [datascript.db :as db]
-    [datascript.pull-parser :as dpp]
-    [datascript.test.core :as tdc]))
-
-#?(:cljd
-   (defmacro thrown-msg? [expected-msg & body]
-     `(try
-        ~@body
-        false
-        (catch Object e#
-          (or (.contains (or (.-message (identity e#)) (.toString e#)) ~expected-msg)
-            ; rethrow for now to have a telling exception
-            (throw e#))))))
+   [datascript.core :as d]
+   [datascript.db :as db]
+   [datascript.pull-parser :as dpp]
+   #_[cljd.core :refer [ExceptionInfo]]
+   [datascript.test.core :as tdc :refer [thrown-msg?]]))
 
 (def db (d/empty-db
-          {:ref            {:db/valueType :db.type/ref}
-           :ref2           {:db/valueType :db.type/ref}
-           :ref3           {:db/valueType :db.type/ref}
-           :ns/ref         {:db/valueType :db.type/ref}
-           :multival       {:db/cardinality :db.cardinality/many}
-           :multiref       {:db/valueType :db.type/ref
-                            :db/cardinality :db.cardinality/many}
-           :component      {:db/valueType :db.type/ref
-                            :db/isComponent true}
-           :multicomponent {:db/valueType :db.type/ref
-                            :db/isComponent true
-                            :db/cardinality :db.cardinality/many}}))
+         {:ref            {:db/valueType :db.type/ref}
+          :ref2           {:db/valueType :db.type/ref}
+          :ref3           {:db/valueType :db.type/ref}
+          :ns/ref         {:db/valueType :db.type/ref}
+          :multival       {:db/cardinality :db.cardinality/many}
+          :multiref       {:db/valueType :db.type/ref
+                           :db/cardinality :db.cardinality/many}
+          :component      {:db/valueType :db.type/ref
+                           :db/isComponent true}
+          :multicomponent {:db/valueType :db.type/ref
+                           :db/isComponent true
+                           :db/cardinality :db.cardinality/many}}))
 
 (defn pattern [& {:as args}]
   (let [attrs (filter #(not= :db/id (:name %)) (:attrs args))]

@@ -1,35 +1,25 @@
 (ns datascript.test.query-or
   (:require
-    #?(:cljd  [cljd.test :as t :refer        [is are deftest testing]]
-       :cljs [cljs.test    :as t :refer-macros [is are deftest testing]]
-       :clj  [clojure.test :as t :refer        [is are deftest testing]])
-    [datascript.core :as d]
-    [datascript.db :as db]
-    [datascript.test.core :as tdc])
-#?(:cljd (:require [cljd.core :refer [ExceptionInfo]])
-   :clj
-   (:import [clojure.lang ExceptionInfo])))
-
-#?(:cljd
-   (defmacro thrown-msg? [expected-msg & body]
-     `(try
-        ~@body
-        false
-        (catch Object e#
-          ; the second or is not correct, the second branch can't be reached
-          (or (.contains (or (.-message (identity e#)) (.toString e#)) ~expected-msg)
-            ; rethrow for now to have a telling exception
-            (throw e#))))))
+   #?(:cljd  [cljd.test :as t :refer        [is are deftest testing]]
+      :cljs [cljs.test    :as t :refer-macros [is are deftest testing]]
+      :clj  [clojure.test :as t :refer        [is are deftest testing]])
+   [datascript.core :as d]
+   [datascript.db :as db]
+   [cljd.core :refer [ExceptionInfo]]
+   [datascript.test.core :as tdc :refer [thrown-msg?]])
+  #?(:cljd nil
+     :clj
+     (:import [clojure.lang ExceptionInfo])))
 
 (def test-db
   (delay
     (d/db-with (d/empty-db)
-      [ {:db/id 1 :name "Ivan" :age 10}
-        {:db/id 2 :name "Ivan" :age 20}
-        {:db/id 3 :name "Oleg" :age 10}
-        {:db/id 4 :name "Oleg" :age 20}
-        {:db/id 5 :name "Ivan" :age 10}
-        {:db/id 6 :name "Ivan" :age 20} ])))
+               [ {:db/id 1 :name "Ivan" :age 10}
+                {:db/id 2 :name "Ivan" :age 20}
+                {:db/id 3 :name "Oleg" :age 10}
+                {:db/id 4 :name "Oleg" :age 20}
+                {:db/id 5 :name "Ivan" :age 10}
+                {:db/id 6 :name "Ivan" :age 20} ])))
 
 (deftest test-or
   (are [q res] (= (d/q (concat '[:find ?e :where] (quote q)) @test-db)
@@ -187,14 +177,15 @@
 
 
 (deftest test-errors
-  (is (thrown-with-msg? ExceptionInfo #"All clauses in 'or' must use same set of free vars, had \[#\{\?e\} #\{(\?a \?e|\?e \?a)\}\] in \(or \[\?e :name _\] \[\?e :age \?a\]\)"
-        (d/q '[:find ?e
-               :where (or [?e :name _]
-                          [?e :age ?a])]
-             @test-db)))
+  ;; moved to thrown-with-msg but lost regexp
+  (is (thrown-msg? "All clauses in 'or' must use same set of free vars, had"
+                   (d/q '[:find ?e
+                          :where (or [?e :name _]
+                                     [?e :age ?a])]
+                        @test-db)))
 
   (is (thrown-msg? "Insufficient bindings: #{?e} not bound in (or-join [[?e]] [?e :name \"Ivan\"])"
-        (d/q '[:find ?e
-               :where (or-join [[?e]]
-                        [?e :name "Ivan"])]
-             @test-db))))
+                   (d/q '[:find ?e
+                          :where (or-join [[?e]]
+                                          [?e :name "Ivan"])]
+                        @test-db))))

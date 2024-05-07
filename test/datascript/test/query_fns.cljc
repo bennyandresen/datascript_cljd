@@ -1,26 +1,15 @@
 (ns datascript.test.query-fns
   (:require
-    #?(:cljd  [cljd.test :as t :refer        [is are deftest testing]]
-       :cljs [cljs.test    :as t :refer-macros [is are deftest testing]]
-       :clj  [clojure.test :as t :refer        [is are deftest testing]])
-    [datascript.core :as d]
-    [datascript.db :as db]
-    [datascript.test.core :as tdc])
-#?(:cljd (:require [cljd.core :refer [ExceptionInfo]])
-   :clj
-   (:import [clojure.lang ExceptionInfo])))
-
-#?(:cljd
-   (defmacro thrown-msg? [expected-msg & body]
-     `(try
-        ~@body
-        false
-        (catch Object e#
-          ; the second or is not correct, the second branch can't be reached
-          (or (.contains (or (.-message (identity e#)) (.toString e#)) ~expected-msg)
-            ; rethrow for now to have a telling exception
-            (throw e#))))))
-
+   #?(:cljd  [cljd.test :as t :refer        [is are deftest testing]]
+      :cljs [cljs.test    :as t :refer-macros [is are deftest testing]]
+      :clj  [clojure.test :as t :refer        [is are deftest testing]])
+   [datascript.core :as d]
+   [datascript.db :as db]
+   [cljd.core :refer [ExceptionInfo]]
+   [datascript.test.core :as tdc :refer [thrown-msg?]])
+  #?(:cljd nil
+     :clj
+     (:import [clojure.lang ExceptionInfo])))
 
 (deftest test-query-fns
   (testing "predicate without free variables"
@@ -31,8 +20,8 @@
 
   (let [db (-> (d/empty-db {:parent {:db/valueType :db.type/ref}})
                (d/db-with [ { :db/id 1, :name  "Ivan",  :age   15 }
-                            { :db/id 2, :name  "Petr",  :age   22, :height 240, :parent 1}
-                            { :db/id 3, :name  "Slava", :age   37, :parent 2}]))]
+                           { :db/id 2, :name  "Petr",  :age   22, :height 240, :parent 1}
+                           { :db/id 3, :name  "Slava", :age   37, :parent 2}]))]
 
     (testing "ground"
       (is (= (d/q '[:find ?vowel
@@ -42,18 +31,18 @@
     (testing "get-else"
       (is (= (d/q '[:find ?e ?age ?height
                     :where [?e :age ?age]
-                           [(get-else $ ?e :height 300) ?height]] db)
+                    [(get-else $ ?e :height 300) ?height]] db)
              #{[1 15 300] [2 22 240] [3 37 300]}))
 
-      (is (thrown-with-msg? ExceptionInfo #"get-else: nil default value is not supported"
-            (d/q '[:find ?e ?height
-                    :where [?e :age]
-                           [(get-else $ ?e :height nil) ?height]] db))))
+      (is (thrown-msg? "get-else: nil default value is not supported"
+                       (d/q '[:find ?e ?height
+                              :where [?e :age]
+                              [(get-else $ ?e :height nil) ?height]] db))))
 
     (testing "get-some"
       (is (= (d/q '[:find ?e ?a ?v
                     :where [?e :name _]
-                           [(get-some $ ?e :height :age) [?a ?v]]] db)
+                    [(get-some $ ?e :height :age) [?a ?v]]] db)
              #{[1 :age 15]
                [2 :height 240]
                [3 :age 37]})))
@@ -62,7 +51,7 @@
       (is (= (d/q '[:find ?e ?age
                     :in $
                     :where [?e :age ?age]
-                           [(missing? $ ?e :height)]] db)
+                    [(missing? $ ?e :height)]] db)
              #{[1 15] [3 37]})))
 
     (testing "missing? back-ref"
@@ -75,50 +64,50 @@
     (testing "Built-ins"
       (is (= (d/q '[:find  ?e1 ?e2
                     :where [?e1 :age ?a1]
-                           [?e2 :age ?a2]
-                           [(< ?a1 18 ?a2)]] db)
+                    [?e2 :age ?a2]
+                    [(< ?a1 18 ?a2)]] db)
              #{[1 2] [1 3]}))
-       (is (= (d/q '[:find  ?a1
-                     :where [_ :age ?a1]
-                            [(< ?a1 22)]] db)
-              #{[15]}))
-       (is (= (d/q '[:find  ?a1
-                     :where [_ :age ?a1]
-                            [(<= ?a1 22)]] db)
-              #{[15] [22]}))
-       (is (= (d/q '[:find  ?a1
-                     :where [_ :age ?a1]
-                            [(> ?a1 22)]] db)
-              #{[37]}))
-       (is (= (d/q '[:find  ?a1
-                     :where [_ :age ?a1]
-                            [(>= ?a1 22)]] db)
-              #{[22] [37]}))
-       (testing "compare values of different types"
-         (let [inputs [[0] [1] [""]]
-               expect (fn [op v]
-                        (set (filter (fn [[x]] (op (db/value-compare x v) 0)) inputs)))]
-           (is (= (d/q '[:find  ?e
-                         :where [?e]
-                         [(< ?e 1)]] inputs)
+      (is (= (d/q '[:find  ?a1
+                    :where [_ :age ?a1]
+                    [(< ?a1 22)]] db)
+             #{[15]}))
+      (is (= (d/q '[:find  ?a1
+                    :where [_ :age ?a1]
+                    [(<= ?a1 22)]] db)
+             #{[15] [22]}))
+      (is (= (d/q '[:find  ?a1
+                    :where [_ :age ?a1]
+                    [(> ?a1 22)]] db)
+             #{[37]}))
+      (is (= (d/q '[:find  ?a1
+                    :where [_ :age ?a1]
+                    [(>= ?a1 22)]] db)
+             #{[22] [37]}))
+      (testing "compare values of different types"
+        (let [inputs [[0] [1] [""]]
+              expect (fn [op v]
+                       (set (filter (fn [[x]] (op (db/value-compare x v) 0)) inputs)))]
+          (is (= (d/q '[:find  ?e
+                        :where [?e]
+                        [(< ?e 1)]] inputs)
                  (expect < 1)))
-           (is (= (d/q '[:find  ?e
-                         :where [?e]
-                         [(<= ?e 1)]] inputs)
+          (is (= (d/q '[:find  ?e
+                        :where [?e]
+                        [(<= ?e 1)]] inputs)
                  (expect <= 1)))
-           (is (= (d/q '[:find  ?e
-                         :where [?e]
-                         [(> ?e 1)]] inputs)
+          (is (= (d/q '[:find  ?e
+                        :where [?e]
+                        [(> ?e 1)]] inputs)
                  (expect > 1)))
-           (is (= (d/q '[:find  ?e
-                         :where [?e]
-                         [(>= ?e 1)]] inputs)
+          (is (= (d/q '[:find  ?e
+                        :where [?e]
+                        [(>= ?e 1)]] inputs)
                  (expect >= 1)))))
 
       (is (= (d/q '[:find  ?x ?c
                     :in    [?x ...]
                     :where [(count ?x) ?c]]
-                   ["a" "abc"])
+                  ["a" "abc"])
              #{["a" 1] ["abc" 3]})))
 
     (testing "Built-in vector, hashmap"
@@ -138,7 +127,7 @@
       (is (= (d/q '[:find  ?e
                     :in    $ ?adult
                     :where [?e :age ?a]
-                           [(?adult ?a)]]
+                    [(?adult ?a)]]
                   db
                   #(> % 18))
              #{[2] [3]})))
@@ -146,23 +135,23 @@
     (testing "Calling a function"
       (is (= (d/q '[:find  ?e1 ?e2 ?e3
                     :where [?e1 :age ?a1]
-                           [?e2 :age ?a2]
-                           [?e3 :age ?a3]
-                           [(+ ?a1 ?a2) ?a12]
-                           [(= ?a12 ?a3)]]
+                    [?e2 :age ?a2]
+                    [?e3 :age ?a3]
+                    [(+ ?a1 ?a2) ?a12]
+                    [(= ?a12 ?a3)]]
                   db)
              #{[1 2 3] [2 1 3]})))
 
     (testing "Two conflicting function values for one binding."
       (is (= (d/q '[:find  ?n
                     :where [(identity 1) ?n]
-                           [(identity 2) ?n]])
+                    [(identity 2) ?n]])
              #{})))
 
     (testing "Destructured conflicting function values for two bindings."
       (is (= (d/q '[:find  ?n ?x
                     :where [(identity [3 4]) [?n ?x]]
-                           [(identity [1 2]) [?n ?x]]])
+                    [(identity [1 2]) [?n ?x]]])
              #{})))
 
     (testing "Rule bindings interacting with function binding. (fn, rule)"
@@ -196,21 +185,21 @@
     (testing "Conflicting relational bindings with function binding. (rel, fn)"
       (is (= (d/q '[:find  ?age
                     :where [_ :age ?age]
-                           [(identity 100) ?age]]
+                    [(identity 100) ?age]]
                   db)
              #{})))
 
     (testing "Conflicting relational bindings with function binding. (fn, rel)"
       (is (= (d/q '[:find  ?age
                     :where [(identity 100) ?age]
-                           [_ :age ?age]]
+                    [_ :age ?age]]
                   db)
              #{})))
 
     (testing "Function on empty rel"
       (is (= (d/q '[:find  ?e ?y
                     :where [?e :salary ?x]
-                           [(+ ?x 100) ?y]]
+                    [(+ ?x 100) ?y]]
                   [[0 :age 15] [1 :age 35]])
              #{})))
 
@@ -218,9 +207,9 @@
       (is (= (d/q '[:find ?x
                     :in    [?in ...] ?f
                     :where [(?f ?in) ?x]]
-                [1 2 3 4]
-                #(when (even? %) %))
-           #{[2] [4]})))
+                  [1 2 3 4]
+                  #(when (even? %) %))
+             #{[2] [4]})))
 
     (testing "Result bindings"
       (is (= (d/q '[:find ?a ?c
@@ -246,7 +235,7 @@
                     :where [(ground ?in) _]]
                   [])
              #{})))
-))
+    ))
 
 
 (deftest test-predicates

@@ -3,22 +3,12 @@
    #?(:cljd  [cljd.test :as t :refer        [is are deftest testing]]
       :cljs [cljs.test    :as t :refer-macros [is are deftest testing]]
       :clj  [clojure.test :as t :refer        [is are deftest testing]])
-    [datascript.core :as d]
-    [datascript.db :as db]
-    [datascript.test.core :as tdc])
-  #?(:cljd nil
+   [datascript.core :as d]
+   [datascript.db :as db]
+   [datascript.test.core :as tdc :refer [thrown-msg?]])
+  #?(:cljd (:use [cljd.core :only [ExceptionInfo]])
      :clj
-      (:import [clojure.lang ExceptionInfo])))
-
-#?(:cljd
-   (defmacro thrown-msg? [expected-msg & body]
-     `(try
-        ~@body
-        false
-        (catch Object e#
-          (or (.contains (or (.-message (identity e#)) (.toString e#)) ~expected-msg)
-            ; rethrow for now to have a telling exception
-            (throw e#))))))
+     (:import [clojure.lang ExceptionInfo])))
 
 
 (deftest test-lookup-refs

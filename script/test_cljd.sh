@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 set -o errexit -o nounset -o pipefail
 cd "`dirname $0`/.."
 PATH="$PWD/.fvm/flutter_sdk/bin:$PATH"
@@ -21,5 +21,5 @@ EOF
 cd tmp/cljdtests
 clojure -M -m cljd.build init
 dart pub add -d test || true
-clojure -A:cljd-dev -M -m cljd.build compile datascript.test.serialize datascript.test.core datascript.test.db datascript.test.conn datascript.test.index datascript.test.query datascript.test.transact datascript.test.entity datascript.test.filter datascript.test.ident datascript.test.tuples datascript.test.components datascript.test.components datascript.test.pull-api datascript.test.explode datascript.test.lookup-refs datascript.test.lru datascript.test.parser datascript.test.parser-find datascript.test.parser-rules datascript.test.parser-return-map datascript.test.parser-where datascript.test.pull-parser datascript.test.query-aggregates datascript.test.query-find-specs datascript.test.query-fns datascript.test.query-not datascript.test.query-or datascript.test.query-pull datascript.test.query-return-map datascript.test.query-rules datascript.test.validation datascript.test.issues datascript.test.listen
+clojure -A:cljd-dev -M -m cljd.build compile datascript.test.serialize datascript.test.core datascript.test.db datascript.test.conn datascript.test.index datascript.test.query datascript.test.transact datascript.test.entity datascript.test.filter datascript.test.ident datascript.test.tuples datascript.test.components datascript.test.components datascript.test.pull-api datascript.test.explode datascript.test.lookup-refs datascript.test.lru datascript.test.parser datascript.test.parser-find datascript.test.parser-rules datascript.test.parser-return-map datascript.test.parser-where datascript.test.pull-parser datascript.test.query-aggregates datascript.test.query-find-specs datascript.test.query-fns datascript.test.query-not datascript.test.query-or datascript.test.query-pull datascript.test.query-return-map datascript.test.query-rules datascript.test.validation datascript.test.issues datascript.test.listen datascript.test.upsert
 dart test -p vm

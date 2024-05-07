@@ -1,39 +1,51 @@
 (ns datascript.test.core
   (:require
-    [#?(:cljs cljs.reader :cljd cljd.reader :clj clojure.edn) :as edn]
-    #?(:cljd  [cljd.test :as t :refer        [is are deftest testing]]
-       :cljs [cljs.test    :as t :refer-macros [is are deftest testing]]
-       :clj  [clojure.test :as t :refer        [is are deftest testing]])
-    [clojure.string :as str]
-    #?(:cljd [wevre.transit-cljd :as transit]
-       :clj  [cognitect.transit :as transit])
-    [datascript.core :as d]
-    [datascript.impl.entity :as de]
-    [datascript.db :as db #?@(:cljs [:refer-macros [defrecord-updatable]]
-                              :clj  [:refer [defrecord-updatable]])]
-    #?(:cljs [datascript.test.cljs])))
+   [#?(:cljs cljs.reader :cljd cljd.reader :clj clojure.edn) :as edn]
+   #?(:cljd  [cljd.test :as t :refer        [is are deftest testing]]
+      :cljs [cljs.test    :as t :refer-macros [is are deftest testing]]
+      :clj  [clojure.test :as t :refer        [is are deftest testing]])
+   [clojure.string :as str]
+   #?(:cljd [wevre.transit-cljd :as transit]
+      :clj  [cognitect.transit :as transit])
+   ["package:transit_dart/transit_dart.dart" :as dart-transit]
+   [datascript.core :as d]
+   [datascript.impl.entity :as de]
+   [cljd.core :refer [ExceptionInfo]]
+   [datascript.db :as db #?@(:cljs [:refer-macros [defrecord-updatable]]
+                             :clj  [:refer [defrecord-updatable]])]
+   #?(:cljs [datascript.test.cljs])))
 
 #?(:cljs
    (enable-console-print!))
 
+#?(:cljd
+   (defmacro thrown-msg? [expected-msg & body]
+     `(try
+        ~@body
+        false
+        (catch dynamic ^ExceptionInfo e#
+          (or (.contains ^String (or (.-message ^ExceptionInfo e#) (.toString e#)) ~expected-msg)
+              ;; rethrow for now to have a telling exception
+              (throw e#))))))
+
 ;; Added special case for printing ex-data of ExceptionInfo
 #?(:cljs
-  (defmethod t/report [::t/default :error] [m]
-    (t/inc-report-counter! :error)
-    (println "\nERROR in" (t/testing-vars-str m))
-    (when (seq (:testing-contexts (t/get-current-env)))
-      (println (t/testing-contexts-str)))
-    (when-let [message (:message m)] (println message))
-    (println "expected:" (pr-str (:expected m)))
-    (print "  actual: ")
-    (let [actual (:actual m)]
-      (cond
-        (instance? ExceptionInfo actual)
-          (println (.-stack actual) "\n" (pr-str (ex-data actual)))
-        (instance? js/Error actual)
-          (println (.-stack actual))
-        :else
-          (prn actual)))))
+   (defmethod t/report [::t/default :error] [m]
+     (t/inc-report-counter! :error)
+     (println "\nERROR in" (t/testing-vars-str m))
+     (when (seq (:testing-contexts (t/get-current-env)))
+       (println (t/testing-contexts-str)))
+     (when-let [message (:message m)] (println message))
+     (println "expected:" (pr-str (:expected m)))
+     (print "  actual: ")
+     (let [actual (:actual m)]
+       (cond
+         (instance? ExceptionInfo actual)
+         (println (.-stack actual) "\n" (pr-str (ex-data actual)))
+         (instance? js/Error actual)
+         (println (.-stack actual))
+         :else
+         (prn actual)))))
 
 #?(:cljs (def test-summary (atom nil)))
 #?(:cljs (defmethod t/report [::t/default :end-run-tests] [m]
@@ -83,12 +95,14 @@
 
 (defn transit-write [o type]
   #?(:cljd
-     (-> (case type
-           :json (transit/json)
-           :json-verbose (transit/json-verbose)
-           :msgpack (transit/msgpack))
-       .-encoder
-       (.convert o))
+     (let [json-enc (.-encoder (transit/json))
+           jsonv-enc (.-encoder (transit/json-verbose))
+           msgpack-enc (.-encoder (transit/msgpack))]
+       (condp = type
+         :json (.convert json-enc o)
+         :json-verbose (.convert jsonv-enc o)
+         :msgpack (.convert msgpack-enc o)
+         (.convert json-enc o)))
      :clj
      (with-open [os (java.io.ByteArrayOutputStream.)]
        (let [writer (transit/writer os type)]
@@ -105,12 +119,14 @@
 
 (defn transit-read [s type]
   #?(:cljd
-     (-> (case type
-           :json (transit/json)
-           :json-verbose (transit/json-verbose)
-           :msgpack (transit/msgpack))
-       .-decoder
-       (.convert s))
+     (let [json-dec (.-decoder (transit/json))
+           jsonv-dec (.-decoder (transit/json-verbose))
+           msgpack-dec (.-decoder (transit/msgpack))]
+       (condp = type
+         :json (.convert json-dec s)
+         :json-verbose (.convert jsonv-dec s)
+         :msgpack (.convert msgpack-dec s)
+         (.convert json-dec s)))
      :clj
      (with-open [is (java.io.ByteArrayInputStream. s)]
        (transit/read (transit/reader is type)))

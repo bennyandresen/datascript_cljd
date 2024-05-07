@@ -3,46 +3,37 @@
    #?(:cljd  [cljd.test :as t :refer        [is are deftest testing]]
       :cljs [cljs.test    :as t :refer-macros [is are deftest testing]]
       :clj  [clojure.test :as t :refer        [is are deftest testing]])
-    [datascript.core :as d]
-    [datascript.db :as db]
-    [datascript.test.core :as tdc]
-    [cljd.core :refer [ExceptionInfo]])
+   [datascript.core :as d]
+   [datascript.db :as db]
+   [datascript.test.core :as tdc :refer [thrown-msg?]]
+   [cljd.core :refer [ExceptionInfo]])
   #?(:cljd nil
      :clj
-       (:import [clojure.lang ExceptionInfo])))
+     (:import [clojure.lang ExceptionInfo])))
 
-#?(:cljd
-   (defmacro thrown-msg? [expected-msg & body]
-     `(try
-        ~@body
-        false
-        (catch Object e
-          (or (.contains (.toString e) ~expected-msg)
-            ; rethrow for now to have a telling exception
-            (throw e))))))
 
 (deftest test-joins
   (let [db (-> (d/empty-db)
                (d/db-with [ { :db/id 1, :name  "Ivan", :age   15 }
-                            { :db/id 2, :name  "Petr", :age   37 }
-                            { :db/id 3, :name  "Ivan", :age   37 }
-                            { :db/id 4, :age 15 }]))]
+                           { :db/id 2, :name  "Petr", :age   37 }
+                           { :db/id 3, :name  "Ivan", :age   37 }
+                           { :db/id 4, :age 15 }]))]
     (is (= (d/q '[:find ?e
                   :where [?e :name]] db)
            #{[1] [2] [3]}))
     (is (= (d/q '[:find  ?e ?v
                   :where [?e :name "Ivan"]
-                         [?e :age ?v]] db)
+                  [?e :age ?v]] db)
            #{[1 15] [3 37]}))
     (is (= (d/q '[:find  ?e1 ?e2
                   :where [?e1 :name ?n]
-                         [?e2 :name ?n]] db)
+                  [?e2 :name ?n]] db)
            #{[1 1] [2 2] [3 3] [1 3] [3 1]}))
     (is (= (d/q '[:find  ?e ?e2 ?n
                   :where [?e :name "Ivan"]
-                         [?e :age ?a]
-                         [?e2 :age ?a]
-                         [?e2 :name ?n]] db)
+                  [?e :age ?a]
+                  [?e2 :age ?a]
+                  [?e2 :name ?n]] db)
            #{[1 1 "Ivan"]
              [3 3 "Ivan"]
              [3 2 "Petr"]}))))
@@ -141,9 +132,9 @@
 
 (deftest test-bindings
   (let [db (-> (d/empty-db)
-             (d/db-with [ { :db/id 1, :name  "Ivan", :age   15 }
-                          { :db/id 2, :name  "Petr", :age   37 }
-                          { :db/id 3, :name  "Ivan", :age   37 }]))]
+               (d/db-with [ { :db/id 1, :name  "Ivan", :age   15 }
+                           { :db/id 2, :name  "Petr", :age   37 }
+                           { :db/id 3, :name  "Ivan", :age   37 }]))]
     (testing "Relation binding"
       (is (= (d/q '[:find  ?e ?email
                     :in    $ [[?n ?email]]
@@ -159,7 +150,7 @@
       (is (= (d/q '[:find  ?e
                     :in    $ [?name ?age]
                     :where [?e :name ?name]
-                           [?e :age ?age]]
+                    [?e :age ?age]]
                   db ["Ivan" 37])
              #{[3]})))
 
@@ -174,16 +165,16 @@
       (is (= (d/q '[:find ?id
                     :in $ [?id ...]
                     :where [?id :age _]]
-               [[1 :name "Ivan"]
-                [2 :name "Petr"]]
-               [])
+                  [[1 :name "Ivan"]
+                   [2 :name "Petr"]]
+                  [])
              #{}))
       (is (= (d/q '[:find ?id
                     :in $ [[?id]]
                     :where [?id :age _]]
-               [[1 :name "Ivan"]
-                [2 :name "Petr"]]
-               [])
+                  [[1 :name "Ivan"]
+                   [2 :name "Petr"]]
+                  [])
              #{})))
 
     (testing "Placeholders"
@@ -197,14 +188,14 @@
              #{[:x :z] [:a :c]})))
 
     (testing "Error reporting"
-      (is (thrown-with-msg? ExceptionInfo #"Cannot bind value :a to tuple \[\?a \?b\]"
-            (d/q '[:find ?a ?b :in [?a ?b]] :a)))
-      (is (thrown-with-msg? ExceptionInfo #"Cannot bind value :a to collection \[\?a \.\.\.\]"
-            (d/q '[:find ?a :in [?a ...]] :a)))
-      (is (thrown-with-msg? ExceptionInfo #"Not enough elements in a collection \[:a\] to bind tuple \[\?a \?b\]"
-            (d/q '[:find ?a ?b :in [?a ?b]] [:a]))))
+      (is (thrown-msg? "Cannot bind value :a to tuple [?a ?b]"
+                       (d/q '[:find ?a ?b :in [?a ?b]] :a)))
+      (is (thrown-msg? "Cannot bind value :a to collection [?a ...]"
+                       (d/q '[:find ?a :in [?a ...]] :a)))
+      (is (thrown-msg? "Not enough elements in a collection [:a] to bind tuple [?a ?b]"
+                       (d/q '[:find ?a ?b :in [?a ?b]] [:a]))))
 
-))
+    ))
 
 (deftest test-nested-bindings
   (is (= (d/q '[:find  ?k ?v

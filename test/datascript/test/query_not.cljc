@@ -1,33 +1,22 @@
 (ns datascript.test.query-not
   (:require
-    #?(:cljd  [cljd.test :as t :refer        [is are deftest testing]]
-       :cljs [cljs.test    :as t :refer-macros [is are deftest testing]]
-       :clj  [clojure.test :as t :refer        [is are deftest testing]])
-    [datascript.core :as d]
-    [datascript.db :as db]
-    [datascript.test.core :as tdc]))
-
-
-#?(:cljd
-   (defmacro thrown-msg? [expected-msg & body]
-     `(try
-        ~@body
-        false
-        (catch Object e#
-          ; the second or is not correct, the second branch can't be reached
-          (or (.contains (or (.-message (identity e#)) (.toString e#)) ~expected-msg)
-            ; rethrow for now to have a telling exception
-            (throw e#))))))
+   #?(:cljd  [cljd.test :as t :refer        [is are deftest testing]]
+      :cljs [cljs.test    :as t :refer-macros [is are deftest testing]]
+      :clj  [clojure.test :as t :refer        [is are deftest testing]])
+   [datascript.core :as d]
+   [datascript.db :as db]
+   [cljd.core :refer [ExceptionInfo]]
+   [datascript.test.core :as tdc :refer [thrown-msg?]]))
 
 (def test-db
   (delay
     (d/db-with (d/empty-db)
-      [ {:db/id 1 :name "Ivan" :age 10}
-        {:db/id 2 :name "Ivan" :age 20}
-        {:db/id 3 :name "Oleg" :age 10}
-        {:db/id 4 :name "Oleg" :age 20}
-        {:db/id 5 :name "Ivan" :age 10}
-        {:db/id 6 :name "Ivan" :age 20} ])))
+               [ {:db/id 1 :name "Ivan" :age 10}
+                {:db/id 2 :name "Ivan" :age 20}
+                {:db/id 3 :name "Oleg" :age 10}
+                {:db/id 4 :name "Oleg" :age 20}
+                {:db/id 5 :name "Ivan" :age 10}
+                {:db/id 6 :name "Ivan" :age 20} ])))
 
 
 (deftest test-not

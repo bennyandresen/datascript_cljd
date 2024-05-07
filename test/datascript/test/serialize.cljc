@@ -6,14 +6,14 @@
       :clj  [clojure.test :as t :refer        [is are deftest testing]])
    [datascript.core :as d]
    [datascript.db :as db]
-   [datascript.test.core :as tdc]
+   [datascript.test.core :as tdc :refer [thrown-msg?]]
    #?(:cljd ["dart:convert" :as dart:convert])
    #?(:cljd nil :clj [cheshire.core :as cheshire])
    #?(:cljd nil :clj [jsonista.core :as jsonista]))
   #?(:cljd
-     (:require [cljd.core :refer [ExceptionInfo]])
+     nil
      :clj
-      (:import [clojure.lang ExceptionInfo])))
+     (:import [clojure.lang ExceptionInfo])))
 
 (t/use-fixtures :once tdc/no-namespace-maps)
 
@@ -92,11 +92,11 @@
 
 (deftest test-init-db
   (let [db-init     (d/init-db
-                      (map (fn [[e a v]] (d/datom e a v)) data)
-                      schema)
+                     (map (fn [[e a v]] (d/datom e a v)) data)
+                     schema)
         db-transact (d/db-with
-                      (d/empty-db schema)
-                      (map (fn [[e a v]] [:db/add e a v]) data))]
+                     (d/empty-db schema)
+                     (map (fn [[e a v]] [:db/add e a v]) data))]
 
     (testing "db-init produces the same result as regular transactions"
       (is (= db-init db-transact)))
@@ -104,7 +104,7 @@
     (testing "db-init produces the same max-eid as regular transactions"
       (let [assertions [ [:db/add -1 :name "Lex"] ]]
         (is (= (d/db-with db-init assertions)
-              (d/db-with db-transact assertions)))))
+               (d/db-with db-transact assertions)))))
 
     (testing "Roundtrip"
       (doseq [[r read-fn] readers]
@@ -112,8 +112,8 @@
           (is (= db-init (read-fn (pr-str db-init)))))))
 
     (testing "Reporting"
-      (is (thrown-with-msg? ExceptionInfo #"init-db expects list of Datoms, got "
-            (d/init-db [[:add -1 :name "Ivan"] {:add -1 :age 35}] schema))))))
+      (is (thrown-msg? "init-db expects list of Datoms, got "
+                       (d/init-db [[:add -1 :name "Ivan"] {:add -1 :age 35}] schema))))))
 
 
 
@@ -147,9 +147,9 @@
 
 (deftest test-nan
   (let [db (d/db-with
-             (d/empty-db schema)
-             [[:db/add 1 :nan ##NaN]])
-        valid? #(-> (:nan (d/entity % 1)) #?(:cljd .-isNaN :clj Double/isNaN :cljs js/isNaN))]
+            (d/empty-db schema)
+            [[:db/add 1 :nan ##NaN]])
+        valid? #(-> ^double (:nan (d/entity % 1)) #?(:cljd .-isNaN :clj Double/isNaN :cljs js/isNaN))]
     (is (valid? (-> db d/serializable d/from-serializable)))
     (is (valid? (-> db d/serializable pr-str edn/read-string d/from-serializable)))
     (is (valid? (-> db (d/serializable {:freeze-fn tdc/transit-write-str}) pr-str edn/read-string (d/from-serializable {:thaw-fn tdc/transit-read-str}))))

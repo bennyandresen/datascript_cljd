@@ -15,11 +15,11 @@
        [datascript.db Datom]
        [me.tonsky.persistent_sorted_set PersistentSortedSet])))
 
-(def ^:const ^:private marker-kw 0)
-(def ^:const ^:private marker-other 1)
-(def ^:const ^:private marker-inf 2)
-(def ^:const ^:private marker-minus-inf 3)
-(def ^:const ^:private marker-nan 4)
+(def ^:private marker-kw 0)
+(def ^:private marker-other 1)
+(def ^:private marker-inf 2)
+(def ^:private marker-minus-inf 3)
+(def ^:private marker-nan 4)
 
 (defn- if-cljs [env then else]
   (if (:ns env) then else))

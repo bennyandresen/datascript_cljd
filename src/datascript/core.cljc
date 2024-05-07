@@ -19,7 +19,7 @@
        [datascript.impl.entity Entity]
        [java.util UUID])))
 
-(def ^:const ^:no-doc tx0 db/tx0)
+(def ^:no-doc tx0 db/tx0)
 
 
 ; Entities

@@ -1,13 +1,15 @@
 (ns ^:no-doc ^:lean-ns datascript.db
   (:require
-    #?(:cljs [goog.array :as garray])
-    [clojure.walk]
-    [clojure.data]
-    #?(:cljd nil :clj [datascript.inline :refer [update]])
-    [datascript.lru :as lru]
-    #?@(:cljd ()
-        :default [[me.tonsky.persistent-sorted-set :as set]
-                  [me.tonsky.persistent-sorted-set.arrays :as arrays]]))
+   #?(:cljs [goog.array :as garray])
+   [clojure.walk]
+   #?(:cljd [cljd.core :refer [HashRankedWideTreapSet]])
+   [clojure.data]
+   [clojure.string]
+   #?(:cljd nil :clj [datascript.inline :refer [update]])
+   [datascript.lru :as lru]
+   #?@(:cljd ()
+       :default [[me.tonsky.persistent-sorted-set :as set]
+                 [me.tonsky.persistent-sorted-set.arrays :as arrays]]))
   #?(:cljd nil :clj (:import clojure.lang.IFn$OOL))
   #?(:cljs (:require-macros [datascript.db :refer [case-tree combine-cmp cond+ declare+ defn+ defcomp defrecord-updatable int-compare raise validate-attr validate-val]]))
   (:refer-clojure :exclude [seqable? #?(:cljd nil :clj update)]))
@@ -22,11 +24,13 @@
      (def IllegalArgumentException js/Error)
      (def UnsupportedOperationException js/Error)))
 
-(def ^:const e0    0)
-(def ^:const tx0   0x20000000)
-(def ^:const emax  0x7FFFFFFF)
-(def ^:const txmax 0x7FFFFFFF)
-(def ^:const implicit-schema {:db/ident {:db/unique :db.unique/identity}})
+;; all previously ^:const
+(def  e0    0)
+(def  tx0   0x20000000)
+(def  emax  0x7FFFFFFF)
+(def  txmax 0x7FFFFFFF)
+(def  implicit-schema {:db/ident {:db/unique :db.unique/identity}})
+
 
 ;; ----------------------------------------------------------------------------
 
@@ -1247,7 +1251,7 @@
      (.write sink ":schema ")
      (-print (-schema db) sink)
      (.write sink (str ", :datoms ["))
-     (loop [[d & more] (-datoms db :eavt nil nil nil nil)]
+     (loop [[^Datom d & more] (-datoms db :eavt nil nil nil nil)]
        (-print [(.-e d) (.-a d) (.-v d) (datom-tx d)] sink)
        (when more
          (.write sink " ")
@@ -1277,7 +1281,7 @@
 
      (defmethod print-method DB [db w] (pr-db db w))
      (defmethod print-method FilteredDB [db w] (pr-db db w))
-))
+     ))
 
 (defn db-from-reader [{:keys [schema datoms]}]
   (init-db (map (fn [[e a v tx]] (datom e a v tx)) datoms) schema {}))
@@ -1308,7 +1312,7 @@
 (defn find-datom [db index c0 c1 c2 c3]
   (validate-indexed db index c0 c1 c2 c3)
   (let [set     (get db index)
-        cmp     #?(:cljd (.-cmpf set) ; TODO add protocol?
+        cmp     #?(:cljd (.-cmpf ^HashRankedWideTreapSet set) ; TODO add protocol?
                    :clj (.comparator ^clojure.lang.Sorted set) :cljs (.-comparator set))
         from    (min-datom (components->pattern db index c0 c1 c2 c3 e0 tx0))
         to      (max-datom (components->pattern db index c0 c1 c2 c3 emax txmax))

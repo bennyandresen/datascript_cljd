@@ -29,7 +29,7 @@
 
 ;; ----------------------------------------------------------------------------
 
-(def make-array
+(def ^List make-array
   #?(:cljd (fn [n] (.filled #/(List dynamic) n nil))
      :default da/make-array))
 
